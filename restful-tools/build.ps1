@@ -45,7 +45,7 @@ try {
     try {
         $archive = [IO.Compression.ZipArchive]::new($stream, [IO.Compression.ZipArchiveMode]::Create)
         try {
-            foreach ($name in @('plugin.toml', 'dist/plugin.wasm', 'README.md', 'LICENSE', 'web/index.html', 'web/page.css', 'web/page.js', 'web/locales/en.json', 'web/locales/zh.json')) {
+            foreach ($name in @('plugin.toml', 'dist/plugin.wasm', 'README.md', 'README.zh-CN.md', 'LICENSE', 'web/index.html', 'web/page.css', 'web/page.js', 'web/locales/en.json', 'web/locales/zh.json')) {
                 $entry = $archive.CreateEntry($name, [IO.Compression.CompressionLevel]::Optimal)
                 $entryStream = $entry.Open()
                 $source = [IO.File]::OpenRead((Join-Path $PSScriptRoot $name))

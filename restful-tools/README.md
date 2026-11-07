@@ -1,75 +1,55 @@
 # RESTful Tools
 
-独立的 OpenIDEA 插件：接口扫描、接口树、搜索、代码跳转、多环境和基础 HTTP 调试。
-不修改 OpenIDEA 主程序，不依赖 IntelliJ 或 RestfulBox。
+English | [简体中文](README.zh-CN.md)
 
-## 安装与使用
+A standalone [OpenIDEA](https://github.com/l0ng-ai/openidea) plugin for endpoint scanning, route browsing and search, source navigation, environments and basic HTTP debugging. It requires no IntelliJ or RestfulBox installation, or changes to the IDE itself.
 
-1. 在 OpenIDEA 的“设置 → 插件 → 从磁盘安装”中选择
-   `dist/community.restful-tools-0.1.2.oiplugin`。已安装旧版的用户可直接安装此版本更新。
-2. 授予读取项目和插件存储权限；需要本机请求时，勾选可选的
-   `net:localhost` / `net:127.0.0.1` 权限。
-3. 打开受信任项目，通过 Tools 菜单或 Find Action 中的
-   `RESTful Tools: Open` 打开底部工具窗口。
-4. 点击“扫描项目”，按“项目 → 模块 → 控制器 → 接口”浏览。模块通过 Maven/Gradle
-   构建文件和 `src` 目录识别；模块和控制器默认折叠，展开时才创建接口节点。
-   支持显示 `Tag` / `Api` 控制器名称、`Operation` / `ApiOperation` 接口名称。
-   搜索框支持模块、URL、HTTP 方法、控制器、方法名、中文名称和文件路径，多个词必须全部匹配。
-5. 单击接口将方法和 URL 填入请求编辑器；双击接口或点击“跳转代码”定位源码。
-   `ANY` 表示未限制 HTTP 方法，调试时默认选 GET，可手动切换。
-6. 在“编辑环境”中保存环境配置。选择环境后，URL、请求头值和请求体中的
-   `{{name}}` 会使用当前环境替换。
-7. 编辑 URL、请求头、请求体后点击“发送”。响应显示状态码、耗时、正文大小、
-   响应头和正文；JSON 正文自动缩进。需要取消时使用 IDE 后台任务中的取消按钮。
+## Compatibility and permissions
 
-扫描分批处理，面板持续显示已扫描/发现的文件总数，可用“取消扫描”保留部分结果。
-源码修改后需重新扫描；扫描不是后台常驻索引。插件重载或空闲回收后也需重新扫描。
-请求草稿和响应仅保留在当前面板中；环境配置按项目持久化，重启后仍可使用。
+- Plugin ID: `community.restful-tools`; version: `0.1.2`.
+- Plugin API requirement: `engines.openidea = "^1.2"`.
+- Required capabilities: `project.read` to read project files and `storage` to save environments.
+- Optional capabilities: `net:localhost` and `net:127.0.0.1` for local requests.
+- The panel supports English and Chinese.
 
-## API 1.2 兼容性
+## Installation and usage
 
-- `plugin.toml` 声明 `engines.openidea = "^1.2"`。
-- 页面通过 `web/index.html` 加载独立的脚本和样式资源，避免发行版的安全策略阻止
-  HTML 字符串视图中的内联脚本；不需要修改 IDE 的 CSP 或主程序。
-- Rust SDK 固定到 OpenIDEA v0.1.38 的提交
-  `9c5372c7ab44207f0d3ac3d01fcb62af224091b7`，其 WIT 包为
-  `openidea:plugin@1.2.0`；不使用仓库当前的 1.3 SDK。
-- 构建脚本检查生成组件中的 OpenIDEA 接口版本，发现非 1.2.0 接口就停止打包。
-- `tests/component_api.rs` 可进一步解析实际组件的 import/export，检查二进制兼容性。
+1. Build the plugin, then select `dist/community.restful-tools-0.1.2.oiplugin` in **Settings → Plugins → Install Plugin from Package File**. Installing this version also updates an older installation.
+2. Grant project read and plugin storage capabilities. Enable the optional `net:localhost` / `net:127.0.0.1` capabilities when sending requests to local services.
+3. Open a trusted project. Use the Tools menu or **RESTful Tools: Open** in Find Action to open the bottom tool window.
+4. Click **Scan project**, then browse **project → module → controller → endpoint**. Modules are identified from Maven/Gradle build files and `src` directories. Modules and controllers start collapsed; endpoint nodes are created on expansion. Controller labels support `Tag` / `Api`; endpoint labels support `Operation` / `ApiOperation`.
+5. Search by module, URL, HTTP method, controller, method name, display label or file path. All search terms must match.
+6. Click an endpoint to fill the request method and URL. Double-click it or use **Go to code** to navigate to the source. `ANY` means the mapping does not restrict the HTTP method; the editor defaults to GET and allows changing it.
+7. Use **Edit environments** to save configurations. The selected environment replaces `{{name}}` in URLs, header values and request bodies.
+8. Edit the request and click **Send**. The response displays status, duration, body size, headers and body, with JSON formatting. Cancel requests through the IDE's background task controls.
 
-仅把清单从 `^1.3` 改成 `^1.2` 不足以解决兼容性，组件必须同时用 1.2 SDK 重编译。
+Scanning runs in batches with progress counts. **Cancel scan** keeps partial results. Rescan after source changes, plugin reload or idle reclamation; this is not a continuously updated index. Request drafts and responses live only in the current panel. Environments persist per project across restarts.
 
-## 支持的扫描范围
+## API 1.2 compatibility
 
-- Java、Kotlin（`.java` / `.kt` / `.kts`）。
-- Spring MVC：`RequestMapping`、`GetMapping`、`PostMapping`、`PutMapping`、
-  `DeleteMapping`、`PatchMapping`，类路径与方法路径组合。
-- `path` / `value` 字面量、Java 数组、Kotlin 数组、`arrayOf(...)`、字面量字符串拼接。
-- `RequestMapping` 中多个 `RequestMethod` 值。
-- OpenFeign：接口方法的 Spring 路由注解和类的 `FeignClient(path = ...)`。
-- JAX-RS：类/方法的 `Path` 和 `GET` / `POST` / `PUT` / `DELETE` / `PATCH` /
-  `HEAD` / `OPTIONS` / `TRACE`，支持全限定注解名。
-- 忽略注释和方法体中的伪注解，跳转位置使用 0-based 行号和 UTF-16 列。
+The manifest declares `engines.openidea = "^1.2"`. The Rust SDK is pinned to OpenIDEA v0.1.38 commit `9c5372c7ab44207f0d3ac3d01fcb62af224091b7`, whose WIT package is `openidea:plugin@1.2.0`.
 
-这是源码声明扫描器，不是完整的 Java/Kotlin 类型分析器。暂不解析路径常量、
-继承映射、组合注解、Spring 属性占位符、JAX-RS 子资源和 DTO 字段；无法求值的
-路径表达式会跳过。未按导入解析注解类型，同名自定义注解可能被识别为框架注解。
-Feign 的 `name` / `url` 不自动用作请求目标，请在环境中设置服务地址。
-暂不支持 Actix-Web、SSE、并发请求或接入原生 Search Everywhere。
+The panel uses `web/index.html` with separate script and style assets, avoiding inline-script restrictions without IDE CSP changes. The build script checks the generated component's OpenIDEA interface version strings and stops packaging if any differs from `1.2.0`. Lowering the manifest engine requirement alone does not make a component built against a newer SDK compatible; rebuild it with the matching SDK.
 
-0.1.2 移除了旧版 2,000 文件、1,000 接口以及单文件 1,000 接口的数量限制。
-每批最多处理 32 个文件，接口按不超过约 512 KiB 的消息传回，避免单次调用的时间/
-CPU 预算和 1 MiB 消息大小限制。保存全部结果后再展开某个控制器，不会一次创建几千个接口按钮。
+## Supported scans
 
-仍有明确的边界：超过 1 MiB 或无法读取的文件会计入跳过数量；索引达到 64 MiB 时
-停止扫描并提示。IDE API 单次文件查询最多返回 10,000 项，插件会补充按已发现模块查询
-并去重；如有查询达到宿主上限，会提示可能仍有文件遗漏。只扫描 IDE 返回的项目文件，
-忽略/排除目录不会扫描。清除数量限制不等于完整复刻 IDEA 的语义扫描，路径常量、
-组合注解和继承等尚未支持的情况仍可能导致数量不同。
+- Java and Kotlin files: `.java`, `.kt`, `.kts`.
+- Spring MVC: `RequestMapping`, `GetMapping`, `PostMapping`, `PutMapping`, `DeleteMapping` and `PatchMapping`, combining class and method paths.
+- Literal `path` / `value` strings, Java arrays, Kotlin arrays, `arrayOf(...)` and literal string concatenation.
+- Multiple `RequestMethod` values in `RequestMapping`.
+- OpenFeign: Spring route annotations on interface methods and class-level `FeignClient(path = ...)`.
+- JAX-RS: class/method `Path` and `GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `HEAD`, `OPTIONS`, `TRACE`, including fully qualified annotation names.
+- Comments and fake annotations inside method bodies are ignored. Navigation uses zero-based lines and UTF-16 columns.
 
-## 环境与网络
+This is a source declaration scanner. It does not evaluate path constants, inherited mappings, composed annotations, Spring property placeholders, JAX-RS subresources or DTO fields. Unevaluable paths are skipped. Annotation types are not resolved through imports, so custom annotations sharing framework annotation names may also match. Feign `name` / `url` values do not set the request target; configure the service address in an environment. Actix-Web, SSE, concurrent requests and native Search Everywhere integration are unsupported.
 
-环境示例（所有变量值都是字符串）：
+Version 0.1.2 removes the earlier limits of 2,000 files, 1,000 endpoints and 1,000 endpoints per file. Each batch processes up to 32 files, and endpoint messages are paged at approximately 512 KiB to stay within call budgets and the 1 MiB message limit. Expanding a controller creates only that controller's endpoint nodes.
+
+Files over 1 MiB or unreadable files are counted as skipped. Scanning stops with a notice at the 64 MiB index guard. A single IDE file query returns at most 10,000 items; the plugin adds queries for discovered modules and deduplicates results, and warns when a query reaches the host limit. Only files returned by the IDE are scanned; ignored/excluded directories are omitted. Results may differ from a semantic scanner because constants, composed annotations and inheritance are unsupported.
+
+## Environments and networking
+
+Example environment configuration; every variable value must be a string:
 
 ```json
 {
@@ -78,11 +58,9 @@ CPU 预算和 1 MiB 消息大小限制。保存全部结果后再展开某个控
 }
 ```
 
-请求示例：`{{baseUrl}}/users/{{userId}}`。扫描得到的 `{id}`、`${...}` 等路径模板
-不会自动猜测值，请在发送前替换。变量可嵌套，最多 16 层；缺失变量或循环引用会报错。
-环境配置以明文写入插件存储，每个项目最多 128 KiB，不是密码保险箱。
+Example request: `{{baseUrl}}/users/{{userId}}`. Replace route templates such as `{id}` or `${...}` manually before sending. Variables can nest up to 16 levels; missing variables and cycles cause errors. Environments are stored as plain text in plugin storage, up to 128 KiB per project, and are not a password vault.
 
-插件默认只声明本机网络权限。其他 HTTPS 主机须先编辑插件目录的 `plugin.toml`：
+Only local network capabilities are declared by default. To access another HTTPS host, edit the plugin's `plugin.toml`:
 
 ```toml
 [capabilities]
@@ -90,49 +68,59 @@ required = ["project.read", "storage"]
 optional = ["net:localhost", "net:127.0.0.1", "net:dev.example.com"]
 ```
 
-重新打包、安装并授予对应权限；使用链接目录开发时修改清单后重新加载插件。
-支持 `net:*.example.com` 子域模式，但不包含裸域名，也不支持 `net:*`。
-修改清单无需修改或重新编译 OpenIDEA。
+Repackage, install and grant the new capability. For linked development, reload after changing the manifest. `net:*.example.com` permits subdomains, but not the bare domain; `net:*` is unsupported. No IDE changes or recompilation are required.
 
-现有 API 的限制仍适用：
+Current request limits:
 
-- 明文 HTTP 仅限 `localhost` / `127.0.0.1`，不支持内网 IP 或内网域名的 HTTP。
-- HTTPS 请求沿用 IDE 的网络客户端和代理设置；不提供每请求证书或代理配置。
-- 同时只发起一个请求，超时 30 秒；响应完整接收后展示。
-- 本插件限制变量展开后的单项文本为 512 KiB、面板消息为 900 KiB。
-- 宿主响应体上限 8 MiB，面板正文最多预览前 128 KiB；响应头最多预览 100 项、16 KiB。
-- 二进制正文按 UTF-8 文本预览，不提供文件上传/下载。
+- Plain HTTP is limited to `localhost` / `127.0.0.1`; LAN IP addresses and LAN hostnames require HTTPS.
+- HTTPS uses the IDE's network client and proxy configuration, without per-request certificate or proxy settings.
+- One request at a time, with a 30-second timeout; the response appears after it is fully received.
+- Each expanded text value is limited to 512 KiB; panel messages are limited to 900 KiB.
+- The host response body limit is 8 MiB. The panel previews the first 128 KiB of the body and at most 100 response headers / 16 KiB.
+- Binary responses are previewed as UTF-8 text. File upload and download are unsupported.
 
-## 构建与测试
+## Build and test
 
-Windows（Rust 工具链需安装 `wasm32-wasip2`）：
+Use a Rust toolchain supporting edition 2024. Run from this plugin directory on Windows:
 
 ```powershell
 rustup target add wasm32-wasip2
 powershell -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
-脚本生成 `dist/plugin.wasm` 和可从磁盘安装的 `.oiplugin` 包。插件独立构建，不需要
-编译 OpenIDEA，也不会修改主程序或其他插件。首次构建需要从 Git 获取固定的 SDK。
-如已设置 `CARGO_TARGET_DIR`，构建产物会从该目录复制。
+The script generates `dist/plugin.wasm` and an installable `.oiplugin` package. It builds independently of the IDE and other plugins. The first build fetches the pinned SDK from Git. If `CARGO_TARGET_DIR` is set, the script copies the component from that directory.
 
-在仓库内也可使用 Git Bash：
+Alternatively, build and link the directory with the OpenIDEA plugin CLI; see the [official plugin guide](https://github.com/l0ng-ai/openidea/blob/main/plugins/README.md):
 
 ```sh
-plugins/build.sh official/restful-tools
+openidea-plugin build
+openidea-plugin link
 ```
 
-以下测试留给使用者执行（构建后再运行，兼容性测试会读取 `dist/plugin.wasm`）：
+The CLI generates and validates `dist/plugin.wasm`; use `build.ps1` to produce the `.oiplugin` package. After rebuilding a linked plugin, use **Settings → Plugins → Reload**.
 
-```powershell
+Run source unit tests covering scanning, navigation, environment storage, request validation and web asset consistency:
+
+```sh
 cargo test --locked
 ```
 
-建议手工检查：
+Suggested manual checks:
 
-1. API 1.2.0 的 IDE 安装成功，插件详情中不出现引擎版本不匹配。
-2. 扫描含 Java/Kotlin Spring、Feign、JAX-RS 的项目，搜索、双击跳转的位置正确。
-3. 添加两个环境，切换环境并重启 IDE，确认配置按项目保存。
-4. 对本机测试服务发 GET/POST，检查 URL、请求头、请求体变量替换和响应展示。
-5. 缺失变量、未授权主机、非本机 HTTP 和连接失败时，面板显示错误并恢复发送按钮。
-6. 请求执行中，确认发送和扫描按钮禁用；通过 IDE 后台任务取消后可再次请求。
+1. Install in an API 1.2.0 IDE without an engine mismatch.
+2. Scan Java/Kotlin Spring, Feign and JAX-RS projects; verify search and source navigation.
+3. Save two environments, switch between them and restart the IDE to verify persistence per project.
+4. Send GET/POST requests to a local service and verify variable substitution and response display.
+5. Verify errors and restored Send controls for missing variables, denied hosts, nonlocal HTTP and connection failures.
+6. Verify Send and Scan are disabled during a request, and cancellation allows another request.
+
+## Source layout and license
+
+- `plugin.toml`: metadata, API requirement, capabilities, view and commands.
+- `src/lib.rs`: panel messaging, batched scanning, project environment storage and request execution.
+- `src/scan.rs`: source route scanning for Spring, Feign and JAX-RS.
+- `src/request.rs`: environment substitution and HTTP request validation.
+- `web/`: panel HTML, CSS, JavaScript and English/Chinese locales.
+- `build.ps1`: Windows build, API version checks and packaging.
+
+Licensed under Apache-2.0; see [LICENSE](LICENSE).

@@ -10,7 +10,7 @@ publish = false
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-openidea-plugin = { path = "../../../sdk/rust/openidea-plugin" }
+openidea-plugin = { git = "https://github.com/l0ng-ai/openidea.git", rev = "9c5372c7ab44207f0d3ac3d01fcb62af224091b7" }
 
 [profile.release]
 opt-level = "s"

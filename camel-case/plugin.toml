@@ -6,7 +6,7 @@ authors = ["OpenIDEA contributors"]
 license = "Apache-2.0"
 change-notes = "0.2.0 — migrate to the OpenIDEA 1.x plugin API and add multi-cursor editing."
 categories = ["tools"]
-engines.openidea = "^1.0"
+engines.openidea = "^1.2"
 wasm = "dist/plugin.wasm"
 activation = ["on-command:*"]
 
