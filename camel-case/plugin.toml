@@ -1,4 +1,4 @@
-id = "openidea.camel-case"
+id = "helipengye.camel-case"
 name = "CamelCase"
 version = "0.2.0"
 description = "Cycles the selection or word at the caret through common identifier cases."

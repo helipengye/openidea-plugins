@@ -1,4 +1,4 @@
-id = "community.mybatis-tools"
+id = "helipengye.mybatis-tools"
 name = "mybatis-tools"
 version = "0.1.8"
 description = "Navigates MyBatis mapper interfaces and XML references; completes statement ids, named parameters and Java properties in SQL placeholders and test expressions."

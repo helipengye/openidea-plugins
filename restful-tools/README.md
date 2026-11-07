@@ -6,15 +6,15 @@ A standalone [OpenIDEA](https://github.com/l0ng-ai/openidea) plugin for endpoint
 
 ## Compatibility and permissions
 
-- Plugin ID: `community.restful-tools`; version: `0.1.2`.
+- Plugin ID: `helipengye.restful-tools`; version: `0.1.3`.
 - Plugin API requirement: `engines.openidea = "^1.2"`.
-- Required capabilities: `project.read` to read project files and `storage` to save environments.
+- Required capabilities: `project.read` to read project files and `storage` to save environments and scan caches.
 - Optional capabilities: `net:localhost` and `net:127.0.0.1` for local requests.
 - The panel supports English and Chinese.
 
 ## Installation and usage
 
-1. Build the plugin, then select `dist/community.restful-tools-0.1.2.oiplugin` in **Settings → Plugins → Install Plugin from Package File**. Installing this version also updates an older installation.
+1. Build the plugin, then select `dist/helipengye.restful-tools-0.1.3.oiplugin` in **Settings → Plugins → Install Plugin from Package File**. Installations with a different plugin ID are treated as separate plugins.
 2. Grant project read and plugin storage capabilities. Enable the optional `net:localhost` / `net:127.0.0.1` capabilities when sending requests to local services.
 3. Open a trusted project. Use the Tools menu or **RESTful Tools: Open** in Find Action to open the bottom tool window.
 4. Click **Scan project**, then browse **project → module → controller → endpoint**. Modules are identified from Maven/Gradle build files and `src` directories. Modules and controllers start collapsed; endpoint nodes are created on expansion. Controller labels support `Tag` / `Api`; endpoint labels support `Operation` / `ApiOperation`.
@@ -23,7 +23,11 @@ A standalone [OpenIDEA](https://github.com/l0ng-ai/openidea) plugin for endpoint
 7. Use **Edit environments** to save configurations. The selected environment replaces `{{name}}` in URLs, header values and request bodies.
 8. Edit the request and click **Send**. The response displays status, duration, body size, headers and body, with JSON formatting. Cancel requests through the IDE's background task controls.
 
-Scanning runs in batches with progress counts. **Cancel scan** keeps partial results. Rescan after source changes, plugin reload or idle reclamation; this is not a continuously updated index. Request drafts and responses live only in the current panel. Environments persist per project across restarts.
+Scanning runs in batches with progress counts. **Cancel scan** keeps partial results in the current instance. Completed scans are compressed and saved per project. Opening the panel after an IDE restart or plugin reload automatically restores the last saved scan, including search and source navigation, with its cache time displayed.
+
+Cached results are snapshots, including any unsaved editor content used by the scan. They are not automatically checked against source changes. Rescan after editing source files; cached navigation positions may have moved. Cancelled scans and scans reaching a file-query or memory limit do not replace the previous complete cache. A completed scan with no endpoints saves an empty result, replacing older results.
+
+Each compressed, Base64-encoded project cache is limited to 768 KiB. OpenIDEA 0.1.38 also limits total plugin storage to 1 MiB, shared with environments and other project caches. Oversized caches or storage failures leave the current results usable and the previous cache intact; the panel reports that caching failed. Invalid or incompatible caches are ignored so a new scan can be started. Request drafts and responses live only in the current panel. Environments persist per project across restarts.
 
 ## API 1.2 compatibility
 
@@ -88,7 +92,7 @@ rustup target add wasm32-wasip2
 powershell -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
-The script generates `dist/plugin.wasm` and an installable `.oiplugin` package. It builds independently of the IDE and other plugins. The first build fetches the pinned SDK from Git. If `CARGO_TARGET_DIR` is set, the script copies the component from that directory.
+The entry script calls this repository's shared `../scripts/build-plugin.ps1`, generating `dist/plugin.wasm` and the unsigned local package `dist/helipengye.restful-tools-0.1.3.oiplugin`. The package includes the manifest, component, both READMEs, `LICENSE` and all `web/` assets. It builds independently of the IDE and other plugins. The first build fetches the pinned SDK from Git. If `CARGO_TARGET_DIR` is set, the script copies the component from that directory.
 
 Alternatively, build and link the directory with the OpenIDEA plugin CLI; see the [official plugin guide](https://github.com/l0ng-ai/openidea/blob/main/plugins/README.md):
 
@@ -118,9 +122,10 @@ Suggested manual checks:
 
 - `plugin.toml`: metadata, API requirement, capabilities, view and commands.
 - `src/lib.rs`: panel messaging, batched scanning, project environment storage and request execution.
+- `src/cache.rs`: compressed scan snapshots, size limits and restoration.
 - `src/scan.rs`: source route scanning for Spring, Feign and JAX-RS.
 - `src/request.rs`: environment substitution and HTTP request validation.
 - `web/`: panel HTML, CSS, JavaScript and English/Chinese locales.
-- `build.ps1`: Windows build, API version checks and packaging.
+- `build.ps1`: entry point for the shared Windows build, API version checks and packaging script.
 
-Licensed under Apache-2.0; see [LICENSE](LICENSE).
+Licensed under Apache-2.0; see [LICENSE](LICENSE). Original OpenIDEA contributor attributions are retained.

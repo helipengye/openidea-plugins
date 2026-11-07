@@ -6,7 +6,7 @@ A plugin for [OpenIDEA](https://github.com/l0ng-ai/openidea) providing navigatio
 
 ## Compatibility and permissions
 
-- Plugin ID: `community.mybatis-tools`
+- Plugin ID: `helipengye.mybatis-tools`
 - Plugin version: `0.1.8` in `plugin.toml`; the Rust crate version is currently `0.1.0`.
 - Plugin API requirement: `engines.openidea = "^1.2"`.
 - Required capability: `project.read`, for finding and reading mapper XML and Java sources. The plugin does not execute SQL or connect to a database.
@@ -62,13 +62,21 @@ Same-named XML files are tried first, up to 32 candidates. Other filenames are d
 
 ## Build and test
 
-Requirements: a Rust toolchain supporting edition 2024, `wasm32-wasip2` and the OpenIDEA plugin CLI. See the [official plugin guide](https://github.com/l0ng-ai/openidea/blob/main/plugins/README.md). The first build needs network access to fetch the pinned SDK and Rust dependencies.
+Requirements: a Rust toolchain supporting edition 2024 and `wasm32-wasip2`. The Windows build script uses the shared `../scripts/build-plugin.ps1` in this repository. The first build needs network access to fetch the pinned SDK and Rust dependencies.
 
 Run from this plugin directory:
 
-```sh
+```powershell
 rustup target add wasm32-wasip2
 cargo test --locked
+powershell -ExecutionPolicy Bypass -File .\build.ps1
+```
+
+The script generates `dist/plugin.wasm` and `dist/helipengye.mybatis-tools-0.1.8.oiplugin`. The package version comes from `plugin.toml`. The unsigned local package includes the manifest, component, both READMEs and `LICENSE`.
+
+Alternatively, use the OpenIDEA plugin CLI; see the [official plugin guide](https://github.com/l0ng-ai/openidea/blob/main/plugins/README.md):
+
+```sh
 openidea-plugin build
 openidea-plugin link
 ```
@@ -82,5 +90,6 @@ openidea-plugin link
 - `src/java.rs`: Java source and type parsing.
 - `src/xml.rs`: XML tags, mappings and expression contexts.
 - `src/navigation.rs`: Java type/property resolution and expression completion.
+- `build.ps1`: entry point for the shared Windows build and packaging script.
 
-The manifest declares the license as `Apache-2.0`.
+Licensed under Apache-2.0; see [LICENSE](LICENSE). Original OpenIDEA contributor attributions are retained.

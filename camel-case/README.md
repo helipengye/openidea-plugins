@@ -6,10 +6,10 @@ A plugin for [OpenIDEA](https://github.com/l0ng-ai/openidea) that cycles selecte
 
 ## Compatibility and permissions
 
-- Plugin ID: `openidea.camel-case`
+- Plugin ID: `helipengye.camel-case`
 - Version: `0.2.0`
 - Plugin API requirement: `engines.openidea = "^1.2"`
-- IDE action ID: `plugin.openidea.camel-case.toggle`
+- IDE action ID: `plugin.helipengye.camel-case.toggle`
 - Required capabilities: `editor.read` and `editor.write`, for reading text and applying edits.
 
 ## Usage
@@ -31,7 +31,7 @@ Without a selection, a word consists of letters, digits and underscores. Select 
 
 ## Build and test
 
-Requirements: a Rust toolchain supporting edition 2024, the `wasm32-wasip2` target and the OpenIDEA plugin CLI. See the [official plugin guide](https://github.com/l0ng-ai/openidea/blob/main/plugins/README.md).
+Requirements: a Rust toolchain supporting edition 2024 and the `wasm32-wasip2` target. The Windows build script uses the shared `../scripts/build-plugin.ps1` in this repository.
 
 The SDK is pinned to OpenIDEA commit `9c5372c7ab44207f0d3ac3d01fcb62af224091b7`, matching the other plugins in this repository:
 
@@ -43,9 +43,17 @@ Cargo fetches the SDK automatically; no local OpenIDEA checkout or SDK path is r
 
 Run from this plugin directory:
 
-```sh
+```powershell
 rustup target add wasm32-wasip2
 cargo test --locked
+powershell -ExecutionPolicy Bypass -File .\build.ps1
+```
+
+The script generates `dist/plugin.wasm` and `dist/helipengye.camel-case-0.2.0.oiplugin`. The unsigned local package includes the manifest, component, both READMEs and `LICENSE`.
+
+Alternatively, use the OpenIDEA plugin CLI; see the [official plugin guide](https://github.com/l0ng-ai/openidea/blob/main/plugins/README.md):
+
+```sh
 openidea-plugin build
 openidea-plugin link
 ```
@@ -57,5 +65,6 @@ openidea-plugin link
 - `plugin.toml`: command, shortcut, capabilities and API requirement.
 - `src/lib.rs`: case detection, word splitting, editor integration and unit tests.
 - `Cargo.toml` / `Cargo.lock`: Rust dependency configuration and lockfile.
+- `build.ps1`: entry point for the shared Windows build and packaging script.
 
-The manifest declares the license as `Apache-2.0`.
+Licensed under Apache-2.0; see [LICENSE](LICENSE). Original OpenIDEA contributor attributions are retained.

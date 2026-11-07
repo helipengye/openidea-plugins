@@ -1,6 +1,8 @@
 pub mod request;
 pub mod scan;
 
+mod cache;
+
 use openidea_plugin::views::{View, ViewEvent, Viewport, Views};
 use openidea_plugin::{Error, Invocation, Plugin, host, register_plugin};
 use request::{Draft, Settings};
@@ -29,6 +31,9 @@ struct Scan {
     bytes: usize,
     generation: u64,
     owner: String,
+    cached: bool,
+    saved_at: u64,
+    cache_error: bool,
 }
 
 #[derive(Default)]
@@ -156,6 +161,16 @@ impl RestfulTools {
             }
         }
         scan.done |= scan.files == scan.paths.len();
+        if scan.done {
+            if scan.limited {
+                scan.cache_error = true;
+            } else {
+                match cache::save(&root, scan) {
+                    Ok(saved_at) => scan.saved_at = saved_at,
+                    Err(_) => scan.cache_error = true,
+                }
+            }
+        }
         Ok(from)
     }
 
@@ -191,8 +206,10 @@ impl RestfulTools {
         }
         post(
             json!({"op": "scan", "root": root, "scan": {
-            "generation": generation, "files": scan.files, "total_files": scan.paths.len(), "count": scan.endpoints.len(),
+            "generation": generation, "files": scan.files,
+            "total_files": if scan.cached { scan.files } else { scan.paths.len() }, "count": scan.endpoints.len(),
             "skipped": scan.skipped, "limited": scan.limited, "done": scan.done, "cancelled": scan.cancelled,
+            "cached": scan.cached, "saved_at": scan.saved_at, "cache_error": scan.cache_error,
             "limit": if scan.bytes > MAX_INDEX_BYTES { "memory" } else if scan.limited { "files" } else { "" }
         }, "continue": !scan.done && (scan.owner.is_empty() || scan.owner == client)}),
             client,
@@ -208,6 +225,13 @@ impl RestfulTools {
         }
         match value.get("op").and_then(Value::as_str).unwrap_or_default() {
             "ready" => {
+                if !self.scans.contains_key(&root)
+                    && let Some(mut scan) = cache::load(&root)
+                {
+                    self.generation += 1;
+                    scan.generation = self.generation;
+                    self.scans.insert(root.clone(), scan);
+                }
                 post(json!({"op": "ready", "root": root, "settings": settings(&root)?}), client)?;
                 self.scanned(&root, client, 0, true)
             }
@@ -393,6 +417,96 @@ mod tests {
     }
 
     #[test]
+    fn completed_scan_survives_reactivation_without_rescanning_and_keeps_navigation() {
+        let host = MockHost::install();
+        host.add_file("Users.java", "class Users { @GetMapping(\"/users\") void list() {} }");
+        let mut plugin = RestfulTools::default();
+        assert_eq!(send(&mut plugin, &host, json!({"op": "scan"}))["scan"]["count"], 1);
+
+        host.add_file("Users.java", "class Users { @GetMapping(\"/changed\") void list() {} }");
+        let mut reactivated = RestfulTools::default();
+        let reply = send(&mut reactivated, &host, json!({"op": "ready"}));
+        assert_eq!(reply["scan"]["count"], 1);
+        assert_eq!(reply["scan"]["cached"], true);
+        assert_eq!(reply["continue"], false);
+        assert_eq!(reactivated.scans["/project"].endpoints[0].url, "/users");
+        send(&mut reactivated, &host, json!({"op": "navigate", "index": 0}));
+        assert_eq!(host.opened_locations().last().unwrap().0, "/project/Users.java");
+    }
+
+    #[test]
+    fn scan_cache_is_project_scoped_and_an_empty_scan_replaces_old_results() {
+        let host = MockHost::install();
+        host.add_file("Users.java", "class Users { @GetMapping(\"/users\") void list() {} }");
+        let mut plugin = RestfulTools::default();
+        send(&mut plugin, &host, json!({"op": "scan"}));
+        host.set_project_root(Some("/another"));
+        let mut reactivated = RestfulTools::default();
+        assert!(send(&mut reactivated, &host, json!({"op": "ready"}))["scan"].is_null());
+
+        host.set_project_root(Some("/project"));
+        assert_eq!(send(&mut reactivated, &host, json!({"op": "ready"}))["scan"]["count"], 1);
+        host.add_file("Users.java", "class Users {}");
+        let rescanned = send(&mut reactivated, &host, json!({"op": "scan"}));
+        assert_eq!(rescanned["scan"]["count"], 0);
+        assert_eq!(rescanned["scan"]["cache_error"], false);
+        let mut restarted = RestfulTools::default();
+        let reply = send(&mut restarted, &host, json!({"op": "ready"}));
+        assert_eq!(reply["scan"]["count"], 0);
+        assert_eq!(reply["scan"]["cached"], true);
+    }
+
+    #[test]
+    fn cancelled_and_limited_scans_preserve_the_last_complete_cache() {
+        let host = MockHost::install();
+        host.add_file("Users.java", "class Users { @GetMapping(\"/users\") void list() {} }");
+        let mut plugin = RestfulTools::default();
+        send(&mut plugin, &host, json!({"op": "scan"}));
+        let original = host.storage()[&cache::key("/project")].clone();
+        for n in 0..80 {
+            host.add_file(&format!("C{n}.java"), "class C { @GetMapping(\"/r\") void m() {} }");
+        }
+        let partial = send(&mut plugin, &host, json!({"op": "scan"}));
+        assert_eq!(partial["continue"], true);
+        send(&mut plugin, &host, json!({"op": "scan-cancel", "generation": partial["scan"]["generation"]}));
+        assert_eq!(host.storage()[&cache::key("/project")], original);
+
+        send(&mut plugin, &host, json!({"op": "scan"}));
+        plugin.scans.get_mut("/project").unwrap().limited = true;
+        while !plugin.scans["/project"].done {
+            plugin.scan_batch(&host.invocation()).unwrap();
+        }
+        assert!(plugin.scans["/project"].cache_error);
+        assert_eq!(host.storage()[&cache::key("/project")], original);
+        let mut restarted = RestfulTools::default();
+        assert_eq!(send(&mut restarted, &host, json!({"op": "ready"}))["scan"]["count"], 1);
+    }
+
+    #[test]
+    fn corrupt_or_unknown_cache_does_not_prevent_a_new_scan() {
+        let host = MockHost::install();
+        host.add_file("Users.java", "class Users { @GetMapping(\"/users\") void list() {} }");
+        for value in ["corrupt", "eJwDAAAAAAE="] {
+            host::storage::set(&cache::key("/project"), value).unwrap();
+            let mut plugin = RestfulTools::default();
+            assert!(send(&mut plugin, &host, json!({"op": "ready"}))["scan"].is_null());
+            assert_eq!(send(&mut plugin, &host, json!({"op": "scan"}))["scan"]["count"], 1);
+        }
+    }
+
+    #[test]
+    fn unavailable_cache_storage_does_not_fail_the_scan() {
+        let host = MockHost::install().with_capabilities(&["project.read"]);
+        host.add_file("Users.java", "class Users { @GetMapping(\"/users\") void list() {} }");
+        let mut plugin = RestfulTools::default();
+        let reply = send(&mut plugin, &host, json!({"op": "scan"}));
+        assert_eq!(reply["op"], "scan");
+        assert_eq!(reply["scan"]["count"], 1);
+        assert_eq!(reply["scan"]["done"], true);
+        assert_eq!(reply["scan"]["cache_error"], true);
+    }
+
+    #[test]
     fn environments_survive_reactivation_and_are_isolated_by_project() {
         let host = MockHost::install();
         let custom = json!({"active": "dev", "environments": {"dev": {"baseUrl": "https://dev.example.com"}}});
@@ -492,6 +606,14 @@ mod tests {
         assert!(pages.len() > 1);
         assert!(pages.iter().all(|(_, text)| text.len() < 1 << 20));
         assert!(plugin.scans["/project"].endpoints.iter().all(|e| ["arm-bi", "arm-web"].contains(&e.module.as_str())));
+        assert_eq!(reply["scan"]["cache_error"], false);
+        assert!(host.storage()[&cache::key("/project")].len() < 768 << 10);
+        let mut restarted = RestfulTools::default();
+        let restored = send(&mut restarted, &host, json!({"op": "ready"}));
+        assert_eq!(restored["scan"]["count"], 8896);
+        assert_eq!(restored["scan"]["total_files"], 2224);
+        assert_eq!(restored["scan"]["cached"], true);
+        assert_eq!(restarted.scans["/project"].endpoints, plugin.scans["/project"].endpoints);
     }
 
     #[test]

@@ -6,10 +6,10 @@
 
 ## 兼容性与权限
 
-- 插件 ID：`openidea.camel-case`
+- 插件 ID：`helipengye.camel-case`
 - 版本：`0.2.0`
 - 插件 API 要求：`engines.openidea = "^1.2"`
-- IDE 动作 ID：`plugin.openidea.camel-case.toggle`
+- IDE 动作 ID：`plugin.helipengye.camel-case.toggle`
 - 必需权限：`editor.read` 和 `editor.write`，用于读取文本和应用编辑。
 
 ## 使用方法
@@ -31,7 +31,7 @@ foo bar baz ←─────────────────────�
 
 ## 构建与测试
 
-需要支持 Rust 2024 edition 的工具链、`wasm32-wasip2` 目标和 OpenIDEA 插件 CLI，安装方式见[官方插件开发指南](https://github.com/l0ng-ai/openidea/blob/main/plugins/README.md)。
+需要支持 Rust 2024 edition 的工具链和 `wasm32-wasip2` 目标。Windows 构建脚本调用本仓库共用的 `../scripts/build-plugin.ps1`。
 
 SDK 固定到 OpenIDEA 提交 `9c5372c7ab44207f0d3ac3d01fcb62af224091b7`，与本仓库另外两个插件一致：
 
@@ -43,9 +43,17 @@ Cargo 自动获取 SDK，不需要本地 OpenIDEA 源码或 SDK 路径。首次�
 
 在本插件目录执行：
 
-```sh
+```powershell
 rustup target add wasm32-wasip2
 cargo test --locked
+powershell -ExecutionPolicy Bypass -File .\build.ps1
+```
+
+脚本生成 `dist/plugin.wasm` 和 `dist/helipengye.camel-case-0.2.0.oiplugin`。本地安装包未签名，包含插件清单、组件、中英文 README 及 `LICENSE`。
+
+也可使用 OpenIDEA 插件 CLI，安装方式见[官方插件开发指南](https://github.com/l0ng-ai/openidea/blob/main/plugins/README.md)：
+
+```sh
 openidea-plugin build
 openidea-plugin link
 ```
@@ -57,5 +65,6 @@ openidea-plugin link
 - `plugin.toml`：命令、快捷键、权限及 API 要求。
 - `src/lib.rs`：格式识别、单词拆分、编辑器集成及单元测试。
 - `Cargo.toml` / `Cargo.lock`：Rust 依赖配置和锁文件。
+- `build.ps1`：共用 Windows 构建及打包脚本的入口。
 
-插件清单声明许可证为 `Apache-2.0`。
+许可证：Apache-2.0，见 [LICENSE](LICENSE)。保留原有 OpenIDEA 贡献者署名。

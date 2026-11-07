@@ -65,7 +65,15 @@
           total: lastScan.total_files,
           count: endpoints.length,
           skipped: lastScan.skipped,
-        }) + (lastScan.limited ? " " + t(lastScan.limit === "memory" ? "indexLimited" : "fileQueryLimited") : "")
+        }) +
+        (lastScan.limited ? " " + t(lastScan.limit === "memory" ? "indexLimited" : "fileQueryLimited") : "") +
+        (lastScan.cache_error
+          ? " " + t("scanCacheFailed")
+          : lastScan.saved_at
+            ? " " + format(lastScan.cached ? "scanCacheRestored" : "scanCacheSaved", {
+                time: new Date(lastScan.saved_at * 1000).toLocaleString(language),
+              })
+            : "")
       : t("notScanned");
   }
 

@@ -1,9 +1,10 @@
-id = "community.restful-tools"
+id = "helipengye.restful-tools"
 name = "RESTful Tools"
-version = "0.1.2"
+version = "0.1.3"
 description = "Scan Spring and JAX-RS endpoints, browse and search routes, jump to code, and debug HTTP requests with environments."
 authors = ["OpenIDEA contributors"]
 license = "Apache-2.0"
+change-notes = "0.1.3 — cache completed scans per project and restore them after IDE restart or plugin reload."
 categories = ["tools", "frameworks"]
 engines.openidea = "^1.2"
 wasm = "dist/plugin.wasm"

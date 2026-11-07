@@ -1,6 +1,6 @@
 [package]
 name = "openidea-plugin-restful-tools"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2024"
 publish = false
 
@@ -14,6 +14,8 @@ crate-type = ["cdylib", "rlib"]
 openidea-plugin = { git = "https://github.com/l0ng-ai/openidea.git", rev = "9c5372c7ab44207f0d3ac3d01fcb62af224091b7" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+base64 = "0.22"
+miniz_oxide = "0.8"
 url = "2"
 
 [dev-dependencies]

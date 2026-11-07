@@ -6,7 +6,7 @@
 
 ## 兼容性与权限
 
-- 插件 ID：`community.mybatis-tools`。
+- 插件 ID：`helipengye.mybatis-tools`。
 - 插件版本：`plugin.toml` 中为 `0.1.8`；Rust crate 版本目前为 `0.1.0`。
 - 插件 API 要求：`engines.openidea = "^1.2"`。
 - 必需权限：`project.read`，用于查找和读取 Mapper XML 与 Java 源码。插件不执行 SQL，也不连接数据库。
@@ -62,13 +62,21 @@ public interface UserMapper {
 
 ## 构建与测试
 
-需要支持 Rust 2024 edition 的工具链、`wasm32-wasip2` 目标和 OpenIDEA 插件 CLI，安装方式见[官方插件开发指南](https://github.com/l0ng-ai/openidea/blob/main/plugins/README.md)。首次构建需要联网获取固定版本的 SDK 和 Rust 依赖。
+需要支持 Rust 2024 edition 的工具链和 `wasm32-wasip2` 目标。Windows 构建脚本调用本仓库共用的 `../scripts/build-plugin.ps1`。首次构建需要联网获取固定版本的 SDK 和 Rust 依赖。
 
 在本插件目录执行：
 
-```sh
+```powershell
 rustup target add wasm32-wasip2
 cargo test --locked
+powershell -ExecutionPolicy Bypass -File .\build.ps1
+```
+
+脚本生成 `dist/plugin.wasm` 和 `dist/helipengye.mybatis-tools-0.1.8.oiplugin`，安装包版本取自 `plugin.toml`。本地安装包未签名，包含插件清单、组件、中英文 README 及 `LICENSE`。
+
+也可使用 OpenIDEA 插件 CLI，安装方式见[官方插件开发指南](https://github.com/l0ng-ai/openidea/blob/main/plugins/README.md)：
+
+```sh
 openidea-plugin build
 openidea-plugin link
 ```
@@ -82,5 +90,6 @@ openidea-plugin link
 - `src/java.rs`：Java 源码及类型解析。
 - `src/xml.rs`：XML 标签、映射和表达式上下文。
 - `src/navigation.rs`：Java 类型、属性解析及表达式补全。
+- `build.ps1`：共用 Windows 构建及打包脚本的入口。
 
-插件清单声明许可证为 `Apache-2.0`。
+许可证：Apache-2.0，见 [LICENSE](LICENSE)。保留原有 OpenIDEA 贡献者署名。

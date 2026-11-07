@@ -7,16 +7,16 @@
 
 ## 兼容性与权限
 
-- 插件 ID：`community.restful-tools`；版本：`0.1.2`。
+- 插件 ID：`helipengye.restful-tools`；版本：`0.1.3`。
 - 插件 API 要求：`engines.openidea = "^1.2"`。
-- 必需权限：`project.read`（读取项目）和 `storage`（保存环境配置）。
+- 必需权限：`project.read`（读取项目）和 `storage`（保存环境配置及扫描缓存）。
 - 可选权限：`net:localhost`、`net:127.0.0.1`（向本机服务发起请求）。
 - 面板支持中文和英文切换。
 
 ## 安装与使用
 
 1. 在 OpenIDEA 的“设置 → 插件 → Install Plugin from Package File（从包文件安装）”中选择
-   `dist/community.restful-tools-0.1.2.oiplugin`。已安装旧版的用户可直接安装此版本更新。
+   `dist/helipengye.restful-tools-0.1.3.oiplugin`。不同插件 ID 的安装会被视为独立插件。
 2. 授予读取项目和插件存储权限；需要本机请求时，勾选可选的
    `net:localhost` / `net:127.0.0.1` 权限。
 3. 打开受信任项目，通过 Tools 菜单或 Find Action 中的
@@ -32,8 +32,17 @@
 7. 编辑 URL、请求头、请求体后点击“发送”。响应显示状态码、耗时、正文大小、
    响应头和正文；JSON 正文自动缩进。需要取消时使用 IDE 后台任务中的取消按钮。
 
-扫描分批处理，面板持续显示已扫描/发现的文件总数，可用“取消扫描”保留部分结果。
-源码修改后需重新扫描；扫描不是后台常驻索引。插件重载或空闲回收后也需重新扫描。
+扫描分批处理，面板持续显示已扫描/发现的文件总数，可用“取消扫描”在当前实例中保留部分结果。
+完整扫描结束后，结果会压缩并按项目保存。重启 IDE 或重新加载插件后，打开面板会自动恢复
+上次保存的扫描结果，保留搜索和源码跳转能力，并显示缓存时间。
+
+缓存是扫描时的快照，包含当次扫描读取的编辑器未保存内容，不会自动校验源码变化。
+源码修改后需重新扫描，缓存中的跳转位置可能已变化。取消扫描或达到文件查询/内存上限时，
+不会覆盖上次完整缓存；正常完成但没有接口的扫描会保存空结果，替换旧结果。
+
+每个项目的缓存经压缩及 Base64 编码后最多 768 KiB。OpenIDEA 0.1.38 的插件存储总限额为
+1 MiB，与环境配置及其他项目缓存共享。缓存过大或写入失败时，当前扫描结果仍可使用，
+已有缓存保留，面板会提示缓存未保存。损坏或版本不兼容的缓存会被忽略，可重新扫描。
 请求草稿和响应仅保留在当前面板中；环境配置按项目持久化，重启后仍可使用。
 
 ## API 1.2 兼容性
@@ -123,8 +132,10 @@ rustup target add wasm32-wasip2
 powershell -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
-脚本生成 `dist/plugin.wasm` 和可从磁盘安装的 `.oiplugin` 包。插件独立构建，不需要
-编译 OpenIDEA，也不会修改主程序或其他插件。首次构建需要从 Git 获取固定的 SDK。
+入口脚本调用本仓库共用的 `../scripts/build-plugin.ps1`，生成 `dist/plugin.wasm` 和
+未签名的本地安装包 `dist/helipengye.restful-tools-0.1.3.oiplugin`。包内包含插件清单、
+组件、中英文 README、`LICENSE` 及全部 `web/` 资源。插件独立构建，不需要编译 OpenIDEA，
+也不会修改主程序或其他插件。首次构建需要从 Git 获取固定的 SDK。
 如已设置 `CARGO_TARGET_DIR`，构建产物会从该目录复制。
 
 也可使用 OpenIDEA 插件 CLI 构建和链接目录，安装方式见[官方插件开发指南](https://github.com/l0ng-ai/openidea/blob/main/plugins/README.md)：
@@ -156,9 +167,10 @@ cargo test --locked
 
 - `plugin.toml`：插件信息、API 要求、权限、工具窗口和命令。
 - `src/lib.rs`：面板通信、分批扫描、项目环境存储和请求执行。
+- `src/cache.rs`：扫描快照压缩、容量限制及恢复。
 - `src/scan.rs`：Spring、Feign 和 JAX-RS 源码路由扫描。
 - `src/request.rs`：环境变量替换和 HTTP 请求校验。
 - `web/`：面板页面、样式、脚本及中英文语言资源。
-- `build.ps1`：Windows 构建、API 版本检查及打包。
+- `build.ps1`：共用 Windows 构建、API 版本检查及打包脚本的入口。
 
-许可证：Apache-2.0，见 [LICENSE](LICENSE)。
+许可证：Apache-2.0，见 [LICENSE](LICENSE)。保留原有 OpenIDEA 贡献者署名。
