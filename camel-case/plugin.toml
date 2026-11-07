@@ -1,0 +1,25 @@
+id = "openidea.camel-case"
+name = "CamelCase"
+version = "0.2.0"
+description = "Cycles the selection or word at the caret through common identifier cases."
+authors = ["OpenIDEA contributors"]
+license = "Apache-2.0"
+change-notes = "0.2.0 — migrate to the OpenIDEA 1.x plugin API and add multi-cursor editing."
+categories = ["tools"]
+engines.openidea = "^1.0"
+wasm = "dist/plugin.wasm"
+activation = ["on-command:*"]
+
+[capabilities]
+required = ["editor.read", "editor.write"]
+
+[[contributes.commands]]
+id = "toggle"
+title = "CamelCase: Toggle Case"
+category = "CamelCase"
+when = "editorFocus"
+
+[[contributes.keymaps]]
+command = "toggle"
+key = "Alt+Shift+U"
+mac = "Alt+Shift+U"

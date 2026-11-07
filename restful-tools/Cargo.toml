@@ -1,0 +1,27 @@
+[package]
+name = "openidea-plugin-restful-tools"
+version = "0.1.2"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# v0.1.38 uses plugin API 1.2. Pin its SDK as well as the manifest engine.
+openidea-plugin = { git = "https://github.com/l0ng-ai/openidea.git", rev = "9c5372c7ab44207f0d3ac3d01fcb62af224091b7" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+url = "2"
+
+[dev-dependencies]
+wasmparser = "0.262"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
+codegen-units = 1
+panic = "abort"

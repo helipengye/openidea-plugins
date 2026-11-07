@@ -1,0 +1,36 @@
+id = "community.restful-tools"
+name = "RESTful Tools"
+version = "0.1.2"
+description = "Scan Spring and JAX-RS endpoints, browse and search routes, jump to code, and debug HTTP requests with environments."
+authors = ["OpenIDEA contributors"]
+license = "Apache-2.0"
+categories = ["tools", "frameworks"]
+engines.openidea = "^1.2"
+wasm = "dist/plugin.wasm"
+activation = ["on-view:restful"]
+
+[capabilities]
+required = ["project.read", "storage"]
+optional = ["net:localhost", "net:127.0.0.1"]
+
+[[contributes.views]]
+id = "restful"
+title = "RESTful Tools"
+icon = "file-http"
+location = "bottom"
+web = "web/index.html"
+
+[[contributes.commands]]
+id = "open"
+title = "RESTful Tools: Open"
+category = "RESTful Tools"
+
+[[contributes.commands]]
+id = "scan"
+title = "RESTful Tools: Scan Project"
+category = "RESTful Tools"
+when = "projectOpen"
+
+[[contributes.menus]]
+menu = "tools"
+command = "open"

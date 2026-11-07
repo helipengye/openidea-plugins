@@ -1,0 +1,22 @@
+id = "community.mybatis-tools"
+name = "mybatis-tools"
+version = "0.1.8"
+description = "Navigates MyBatis mapper interfaces and XML references; completes statement ids, named parameters and Java properties in SQL placeholders and test expressions."
+authors = ["OpenIDEA contributors"]
+license = "Apache-2.0"
+change-notes = "0.1.8 — fixes navigation timeouts for large mapper XML files by tracking XML positions incrementally and resolving statement ids directly to Java methods. Preserves native Java Ctrl-click usages and API 1.2 compatibility."
+categories = ["frameworks"]
+engines.openidea = "^1.2"
+wasm = "dist/plugin.wasm"
+activation = ["on-command:*"]
+
+[capabilities]
+required = ["project.read"]
+
+[[contributes.providers]]
+kinds = ["definition", "completion"]
+languages = ["xml"]
+
+[[contributes.providers]]
+kinds = ["line-markers"]
+languages = ["java", "xml"]

@@ -1,0 +1,25 @@
+[package]
+name = "openidea-plugin-mybatis-tools"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# A plugin builds on its own (target wasm32-wasip2), outside any IDE workspace.
+[workspace]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Pin the API 1.2 SDK so rebuilding does not require a newer IDE.
+openidea-plugin = { git = "https://github.com/l0ng-ai/openidea.git", rev = "9c5372c7ab44207f0d3ac3d01fcb62af224091b7" }
+
+[dev-dependencies]
+wasmparser = "0.262"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
+codegen-units = 1
+panic = "abort"

@@ -1,0 +1,220 @@
+* {
+  box-sizing: border-box;
+}
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  margin: 0;
+  font: 12px var(--openidea-font-ui, system-ui, sans-serif);
+  color: var(--openidea-fg);
+  background: var(--openidea-bg);
+}
+header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--openidea-border);
+}
+header strong {
+  white-space: nowrap;
+}
+#project {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+main {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: minmax(220px, 30%) minmax(0, 1fr);
+}
+aside {
+  overflow: auto;
+  padding: 10px;
+  border-right: 1px solid var(--openidea-border);
+}
+.client {
+  min-width: 0;
+  overflow: auto;
+  padding: 10px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+input,
+textarea,
+select,
+button {
+  font: inherit;
+  color: var(--openidea-fg);
+  background: var(--openidea-bg-input, transparent);
+  border: 1px solid var(--openidea-border);
+  border-radius: 4px;
+  padding: 5px 7px;
+}
+button {
+  cursor: pointer;
+  background: var(--openidea-bg-elevated, transparent);
+  white-space: nowrap;
+}
+button:hover {
+  background: var(--openidea-bg-hover, transparent);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+pre:focus-visible {
+  outline: 1px solid var(--openidea-accent);
+  outline-offset: 1px;
+}
+.primary {
+  color: var(--openidea-accent);
+  border-color: var(--openidea-accent);
+}
+input {
+  min-width: 0;
+}
+#search,
+#url {
+  flex: 1;
+  width: 0;
+}
+textarea {
+  width: 100%;
+  resize: vertical;
+  display: block;
+  margin: 5px 0 10px;
+  font-family: var(--openidea-font-mono, monospace);
+}
+.muted {
+  color: var(--openidea-fg-muted);
+  line-height: 1.5;
+}
+#scan-status {
+  margin-bottom: 10px;
+}
+details {
+  margin: 6px 0;
+}
+summary {
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.tree-children {
+  padding-left: 18px;
+}
+.tree-node {
+  margin: 2px 0;
+}
+.tree-node > summary {
+  white-space: nowrap;
+  padding: 4px 2px;
+  border-radius: 3px;
+}
+.tree-node > summary:hover {
+  background: var(--openidea-bg-hover);
+}
+.tree-icon {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  margin: 0 5px 0 2px;
+  color: var(--openidea-fg-muted);
+}
+.tree-icon-project,
+.tree-icon-module {
+  color: var(--openidea-accent);
+}
+#tree {
+  min-width: max-content;
+}
+.endpoint {
+  display: flex;
+  text-align: left;
+  gap: 8px;
+  border-color: transparent;
+  background: transparent;
+  min-width: 0;
+  width: 100%;
+  padding: 4px 6px;
+}
+.endpoint[aria-pressed="true"] {
+  border-color: var(--openidea-accent);
+  background: var(--openidea-bg-selected, transparent);
+}
+.verb {
+  color: var(--openidea-accent);
+  font: 11px var(--openidea-font-mono, monospace);
+  width: 48px;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+.route {
+  white-space: nowrap;
+}
+.route small {
+  display: block;
+  color: var(--openidea-fg-muted);
+  margin-top: 3px;
+}
+#environment-editor {
+  padding: 8px;
+  border: 1px solid var(--openidea-border);
+  margin-bottom: 10px;
+}
+#environment-editor p {
+  margin-top: 0;
+}
+#notice {
+  margin: 8px 0;
+  min-height: 18px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+#notice[data-error="true"] {
+  color: var(--openidea-danger);
+}
+.response {
+  border-top: 1px solid var(--openidea-border);
+  padding-top: 10px;
+}
+pre {
+  font: 12px/1.5 var(--openidea-font-mono, monospace);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 8px 0;
+  user-select: text;
+}
+@media (max-width: 650px) {
+  main {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: auto;
+  }
+  aside {
+    max-height: 40vh;
+    border-right: 0;
+    border-bottom: 1px solid var(--openidea-border);
+  }
+  .client {
+    overflow: visible;
+  }
+  .client > .row {
+    flex-wrap: wrap;
+  }
+}

@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="./page.css" />
+  </head>
+  <body>
+    <header>
+      <strong>RESTful Tools</strong>
+      <span id="project" class="muted"></span>
+      <select id="language" aria-label="Language">
+        <option value="zh">简体中文</option>
+        <option value="en">English</option>
+      </select>
+    </header>
+    <main>
+      <aside>
+        <div class="row">
+          <button id="scan" data-text="scan"></button><button id="cancel-scan" data-text="cancelScan" hidden></button
+          ><input id="search" type="search" data-placeholder="search" data-label="search" />
+        </div>
+        <div id="scan-status" class="muted" role="status"></div>
+        <div id="tree"></div>
+      </aside>
+      <section class="client">
+        <div class="row">
+          <label for="environment" data-text="environment"></label
+          ><select id="environment"></select
+          ><button id="environments" data-text="editEnvironments"></button
+          ><button id="navigate" data-text="navigate" disabled></button>
+        </div>
+        <div id="environment-editor" hidden>
+          <p class="muted" data-text="environmentHelp"></p>
+          <label for="environment-json" data-text="environmentJson"></label>
+          <textarea id="environment-json" rows="7" spellcheck="false"></textarea>
+          <div class="row">
+            <button id="save-environments" data-text="save"></button
+            ><button id="close-environments" data-text="close"></button>
+          </div>
+        </div>
+        <form id="request">
+          <div class="row address">
+            <select id="method" data-label="method">
+              <option>GET</option>
+              <option>POST</option>
+              <option>PUT</option>
+              <option>DELETE</option>
+              <option>PATCH</option>
+              <option>HEAD</option>
+              <option>OPTIONS</option>
+              <option>TRACE</option></select
+            ><input id="url" aria-label="URL" value="{{baseUrl}}/" spellcheck="false" required /><button
+              id="send"
+              type="submit"
+              class="primary"
+              data-text="send"
+            ></button>
+          </div>
+          <label for="headers" data-text="headers"></label
+          ><textarea id="headers" rows="3" spellcheck="false" placeholder="Accept: application/json"></textarea>
+          <label for="body" data-text="body"></label><textarea id="body" rows="4" spellcheck="false"></textarea>
+        </form>
+        <div class="muted" data-text="networkHelp"></div>
+        <div id="notice" role="status" aria-live="polite"></div>
+        <section class="response" aria-labelledby="response-label">
+          <div class="row">
+            <strong id="response-label" data-text="response"></strong><span id="response-status" role="status"></span>
+          </div>
+          <details>
+            <summary data-text="responseHeaders"></summary>
+            <pre id="response-headers"></pre>
+          </details>
+          <pre id="response-body" tabindex="0"></pre>
+        </section>
+      </section>
+    </main>
+    <script src="./page.js"></script>
+  </body>
+</html>
