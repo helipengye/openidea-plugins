@@ -11,7 +11,7 @@
 | 插件 | 主要功能 | 版本 | 插件 API 要求 | 文档 |
 | --- | --- | --- | --- | --- |
 | CamelCase | 将选中文本或光标处单词循环转换为连字符、全大写下划线、大驼峰、小驼峰、下划线及空格分词格式；支持多光标和 `Alt+Shift+U` 快捷键。 | `0.2.0` | `^1.2` | [中文](camel-case/README.zh-CN.md) · [English](camel-case/README.md) |
-| MyBatis Tools | 在 Java Mapper 方法与 XML 语句之间导航，跳转 XML 引用，补全语句 ID、参数及 Java 属性。 | `0.1.8` | `^1.2` | [中文](mybatis-tools/README.zh-CN.md) · [English](mybatis-tools/README.md) |
+| MyBatis Tools | 在 Java Mapper 方法与 XML 语句之间导航，跳转 XML 引用，补全语句 ID、参数及 Java 属性。 | `0.1.9` | `^1.2` | [中文](mybatis-tools/README.zh-CN.md) · [English](mybatis-tools/README.md) |
 | RESTful Tools | 扫描 Java/Kotlin 中的 Spring MVC、OpenFeign 和 JAX-RS 接口，重启后恢复扫描缓存，浏览和搜索路由、跳转源码，并通过多环境配置调试 HTTP 请求。 | `0.1.3` | `^1.2` | [中文](restful-tools/README.zh-CN.md) · [English](restful-tools/README.md) |
 
 以上版本和 API 要求取自各插件的 `plugin.toml`。插件 API 版本与 IDE 应用发布版本是不同概念。

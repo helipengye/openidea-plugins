@@ -7,7 +7,7 @@
 ## 兼容性与权限
 
 - 插件 ID：`helipengye.mybatis-tools`。
-- 插件版本：`plugin.toml` 中为 `0.1.8`；Rust crate 版本目前为 `0.1.0`。
+- 插件版本：`plugin.toml` 中为 `0.1.9`；Rust crate 版本目前为 `0.1.0`。
 - 插件 API 要求：`engines.openidea = "^1.2"`。
 - 必需权限：`project.read`，用于查找和读取 Mapper XML 与 Java 源码。插件不执行 SQL，也不连接数据库。
 - SDK 固定到 OpenIDEA 提交 `9c5372c7ab44207f0d3ac3d01fcb62af224091b7`，保持 API 1.2 兼容性。
@@ -22,6 +22,8 @@
 - 在 `#{…}`、`${…}` 和动态 SQL 的 test 表达式中补全参数及 Java 属性；在能够解析的情况下支持 `@Param` 名称、嵌套属性及 `foreach` 变量。
 
 Java 中的 Ctrl-click / Go to Definition 继续交给 IDE 原生处理。从 Java 声明跳转到 XML 语句时，请使用行号旁的导航图标。
+
+0.1.9 优化了 XML `test` 表达式跳转：Java 声明位置复用行索引，表达式导航按需读取 XML 标签，无需先收集整份文件的映射。引用跳转仅查询光标处的属性值，保留共享 SQL 片段、继承参数、嵌套属性及 `foreach` 作用域支持；不修改 IDE 的 500ms 超时限制。
 
 ## 使用方法
 
@@ -72,7 +74,7 @@ cargo test --locked
 powershell -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
-脚本生成 `dist/plugin.wasm` 和 `dist/helipengye.mybatis-tools-0.1.8.oiplugin`，安装包版本取自 `plugin.toml`。本地安装包未签名，包含插件清单、组件、中英文 README 及 `LICENSE`。
+脚本生成 `dist/plugin.wasm` 和 `dist/helipengye.mybatis-tools-0.1.9.oiplugin`，安装包版本取自 `plugin.toml`。本地安装包未签名，包含插件清单、组件、中英文 README 及 `LICENSE`。
 
 也可使用 OpenIDEA 插件 CLI，安装方式见[官方插件开发指南](https://github.com/l0ng-ai/openidea/blob/main/plugins/README.md)：
 
@@ -81,7 +83,7 @@ openidea-plugin build
 openidea-plugin link
 ```
 
-`build` 生成并校验 `dist/plugin.wasm`；`link` 将当前目录链接到本机 IDE。重新构建后，在 **设置 → 插件 → Reload** 中重新加载。`src/lib.rs` 中的单元测试覆盖解析、导航、分片索引及语句/参数补全。
+`build` 生成并校验 `dist/plugin.wasm`；`link` 将当前目录链接到本机 IDE。重新构建后，在 **设置 → 插件 → Reload** 中重新加载。`src/lib.rs` 中的单元测试覆盖解析、导航、分片索引、语句/参数补全、UTF-16 位置、共享 SQL/foreach 作用域，以及原生模拟宿主下 6000 属性跳转耗时低于 500ms 的性能回归。原生测试耗时不代表 IDE/WASM 内的实际表现。
 
 ## 源码结构
 

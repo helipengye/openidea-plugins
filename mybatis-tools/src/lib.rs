@@ -71,6 +71,28 @@ fn range_of(text: &str, start: usize, end: usize) -> Range {
     Range::new(position(text, start), position(text, end))
 }
 
+/// Reuse line starts when locating many declarations in one Java source.
+struct LineIndex<'a> {
+    text: &'a str,
+    starts: Vec<usize>,
+}
+
+impl<'a> LineIndex<'a> {
+    fn new(text: &'a str) -> Self {
+        let starts = std::iter::once(0).chain(text.match_indices('\n').map(|(i, _)| i + 1)).collect();
+        Self { text, starts }
+    }
+
+    fn position(&self, at: usize) -> Position {
+        let line = self.starts.partition_point(|start| *start <= at) - 1;
+        Position::new(line as u32, self.text[self.starts[line]..at].encode_utf16().count() as u32)
+    }
+
+    fn range(&self, start: usize, end: usize) -> Range {
+        Range::new(self.position(start), self.position(end))
+    }
+}
+
 pub fn parse_xml(text: &str) -> MapperXml {
     let mut out = MapperXml::default();
     for tag in xml::tags(text) {
@@ -207,6 +229,7 @@ pub fn parse_java(text: &str) -> MapperJava {
     let package =
         text.lines().find_map(|l| l.trim().strip_prefix("package ").map(|p| p.trim_end_matches(';').trim().to_owned()));
     let Some(i) = text.find("interface ") else { return MapperJava::default() };
+    let positions = LineIndex::new(text);
     let simple: String = text[i + 10..].trim_start().chars().take_while(|c| ident(*c)).collect();
     let name = Some(match package {
         Some(p) => format!("{p}.{simple}"),
@@ -245,7 +268,7 @@ pub fn parse_java(text: &str) -> MapperJava {
                             .filter(|n| !n.is_empty())
                             .collect();
                         methods.push((
-                            Named { name: method.to_owned(), range: range_of(text, s, s + method.len()) },
+                            Named { name: method.to_owned(), range: positions.range(s, s + method.len()) },
                             params,
                         ));
                     }
@@ -402,22 +425,20 @@ impl Navigator {
         (java.name.as_deref() == Some(namespace)).then_some((path, java))
     }
 
-    /// The references an XML document holds, each with its jump targets:
+    /// Only resolve the references at the caret:
     /// `resultMap="…"` and `refid="…"` to their definitions (here, or in the
     /// namespace's file), class attributes to the Java files naming them.
-    fn xml_refs(&mut self, doc: &Document) -> Vec<(Named, Vec<Location>)> {
-        let xml = parse_xml(&doc.text);
-        let project = project_of(&doc.path);
+    fn xml_refs(&mut self, doc: &Document, xml: &MapperXml, project: Option<&Project>, at: Position) -> Vec<Location> {
         let mut out = Vec::new();
-        for r in &xml.map_refs {
-            out.push((r.clone(), self.ref_targets(project.as_ref(), &doc.path, &xml, &r.name, false)));
+        for r in xml.map_refs.iter().filter(|r| contains(r.range, at)) {
+            out.extend(self.ref_targets(project, &doc.path, xml, &r.name, false));
         }
-        for r in &xml.sql_refs {
-            out.push((r.clone(), self.ref_targets(project.as_ref(), &doc.path, &xml, &r.name, true)));
+        for r in xml.sql_refs.iter().filter(|r| contains(r.range, at)) {
+            out.extend(self.ref_targets(project, &doc.path, xml, &r.name, true));
         }
-        if let Some(project) = &project {
-            for c in &xml.classes {
-                out.push((c.clone(), self.class_targets(project, &c.name)));
+        if let Some(project) = project {
+            for c in xml.classes.iter().filter(|c| contains(c.range, at)) {
+                out.extend(self.class_targets(project, &c.name));
             }
         }
         out
@@ -566,53 +587,44 @@ impl Providers for Navigator {
 
     fn definition(&mut self, doc: &Document, at: Position) -> Vec<Location> {
         // Java declarations must keep the IDE's native Show Usages behavior.
-        if doc.language == "java" {
+        if doc.language != "xml" {
             return Vec::new();
         }
-        if doc.language == "xml" {
-            let xml = parse_xml(&doc.text);
-            if let Some(project) = project_of(&doc.path) {
-                if let Some(statement) = xml.statements.iter().find(|s| contains(s.range, at))
-                    && let Some(namespace) = &xml.namespace
-                {
-                    let Some((path, java)) = self.java_for(&project, namespace) else { return Vec::new() };
-                    return java
-                        .methods
-                        .into_iter()
-                        .find(|(m, _)| m.name == statement.name)
-                        .map(|(m, _)| Location { path, range: m.range })
-                        .into_iter()
-                        .collect();
-                }
-                if let Some(cursor) = offset(&doc.text, at)
-                    && let Some(mapping) = xml::mapping_at(&doc.text, cursor)
-                {
-                    return navigation::mapping_definition(&project, &mut self.type_paths, &mapping);
-                }
-                if let Some(namespace) = &xml.namespace_ref
-                    && contains(namespace.range, at)
-                {
-                    return self.class_targets(&project, &namespace.name);
-                }
-                if let Some(cursor) = offset(&doc.text, at)
-                    && let Some(expressions) = xml::expressions_at(&doc.text, cursor)
-                    && let Some(namespace) = &xml.namespace
-                {
-                    return navigation::definitions(&project, &mut self.type_paths, namespace, &doc.path, &expressions);
-                }
+        let project = project_of(&doc.path);
+        if let Some(project) = &project
+            && let Some(cursor) = offset(&doc.text, at)
+        {
+            if let Some(expressions) = xml::expressions_at(&doc.text, cursor)
+                && let Some(namespace) = xml::namespace(&doc.text)
+            {
+                return navigation::definitions(project, &mut self.type_paths, &namespace, &doc.path, &expressions);
+            }
+            if let Some(mapping) = xml::mapping_at(&doc.text, cursor) {
+                return navigation::mapping_definition(project, &mut self.type_paths, &mapping);
             }
         }
-        let mut found = self
-            .links(doc)
-            .into_iter()
-            .filter(|(n, ..)| contains(n.range, at))
-            .map(|(_, l, _)| l)
-            .collect::<Vec<_>>();
+        let xml = parse_xml(&doc.text);
+        if let Some(project) = &project {
+            if let Some(statement) = xml.statements.iter().find(|s| contains(s.range, at))
+                && let Some(namespace) = &xml.namespace
+            {
+                let Some((path, java)) = self.java_for(project, namespace) else { return Vec::new() };
+                return java
+                    .methods
+                    .into_iter()
+                    .find(|(m, _)| m.name == statement.name)
+                    .map(|(m, _)| Location { path, range: m.range })
+                    .into_iter()
+                    .collect();
+            }
+            if let Some(namespace) = &xml.namespace_ref
+                && contains(namespace.range, at)
+            {
+                return self.class_targets(project, &namespace.name);
+            }
+        }
         // References inside the XML: resultMap and include targets, classes.
-        found.extend(
-            self.xml_refs(doc).into_iter().filter(|(n, _)| contains(n.range, at)).flat_map(|(_, l)| l),
-        );
-        found
+        self.xml_refs(doc, &xml, project.as_ref(), at)
     }
 
     fn completion(&mut self, doc: &Document, at: Position, _trigger: Option<&str>) -> Vec<CompletionItem> {
@@ -621,13 +633,11 @@ impl Providers for Navigator {
         }
         let Some(cursor) = offset(&doc.text, at) else { return Vec::new() };
         let before = &doc.text[..cursor];
-        let xml = parse_xml(&doc.text);
-        let Some(ns) = xml.namespace.clone() else { return Vec::new() };
+        let Some(ns) = xml::namespace(&doc.text) else { return Vec::new() };
         let Some(project) = project_of(&doc.path) else { return Vec::new() };
         if let Some(completion) = xml::completion_at(&doc.text, cursor) {
             return navigation::completions(&project, &mut self.type_paths, &ns, &doc.path, &completion);
         }
-        let Some((_, java)) = self.java_for(&project, &ns) else { return Vec::new() };
         let line_start = before.rfind('\n').map_or(0, |i| i + 1);
         let line = &before[line_start..];
         // Inside `id="…` of a statement tag: the interface's unmapped methods.
@@ -635,6 +645,8 @@ impl Providers for Navigator {
             && !line[i + 4..].contains('"')
             && STATEMENTS.iter().any(|t| line.contains(&format!("<{t}")))
         {
+            let xml = parse_xml(&doc.text);
+            let Some((_, java)) = self.java_for(&project, &ns) else { return Vec::new() };
             let typed = &line[i + 4..];
             let start = Position::new(at.line, at.character - typed.encode_utf16().count() as u32);
             return java
@@ -844,6 +856,88 @@ mod tests {
         assert!(targets[0].path.ends_with("UserMapper.java"));
         assert_eq!(targets[0].range.start, at(JAVA, 5, "findById"));
         assert!(n.class_path.is_empty(), "a statement id must not resolve every class in the XML");
+    }
+
+    #[test]
+    fn xml_reference_navigation_resolves_only_the_reference_at_the_caret() {
+        let host = refs_setup();
+        let mut text = "<mapper namespace=\"com.acme.UserMapper\">\n<select id=\"q\" resultType=\"com.acme.User\">select 1</select>\n".to_owned();
+        for i in 0..128 {
+            text.push_str(&format!("<select id=\"unused{i}\" resultType=\"com.acme.Unrelated{i}\"/>\n"));
+        }
+        text.push_str("</mapper>");
+        host.add_file("Refs.xml", &text);
+        let document = doc("/project/Refs.xml", "xml", &text);
+        let mut navigator = Navigator::default();
+        let targets = navigator.definition(&document, at(&text, 1, "com.acme.User"));
+        assert_eq!(targets.len(), 1);
+        assert_eq!(navigator.class_path.len(), 1, "do not resolve the other 128 result types");
+        assert!(navigator.java_path.is_empty(), "a type reference does not need the mapper's methods");
+        let mut navigator = Navigator::default();
+        assert!(navigator.definition(&document, at(&text, 1, "select 1")).is_empty());
+        assert!(navigator.class_path.is_empty(), "plain SQL must not resolve Java types");
+        assert!(navigator.java_path.is_empty(), "plain SQL must not resolve the mapper");
+    }
+
+    #[test]
+    fn test_expression_navigation_in_a_large_entity_stays_within_the_provider_deadline() {
+        let host = MockHost::install();
+        host.add_file("com/acme/UserMapper.java", "package com.acme;\npublic interface UserMapper { User find(User user); }");
+        let mut entity = "package com.acme;\npublic class User {\n".to_owned();
+        for i in 0..6000 {
+            entity.push_str(&format!("    /* 中文😀 */ private String field{i};\n"));
+        }
+        entity.push_str("}\n");
+        host.add_file("com/acme/User.java", &entity);
+        let text = "<mapper namespace=\"com.acme.UserMapper\">\n<select id=\"find\"><if test=\"field5999 != null\">SELECT 1</if></select>\n</mapper>";
+        let document = doc("/project/UserMapper.xml", "xml", text);
+        let mut navigator = Navigator::default();
+        let started = Instant::now();
+        let targets = navigator.definition(&document, at(text, 1, "field5999"));
+        let elapsed = started.elapsed();
+        eprintln!("6000-property test expression navigation: {elapsed:?}");
+        assert_eq!(targets.len(), 1);
+        assert_eq!(targets[0].range.start, position(&entity, entity.rfind("field5999").unwrap()));
+        assert!(elapsed < Duration::from_millis(500), "test expression navigation took {elapsed:?}");
+    }
+
+    #[test]
+    fn indexed_java_positions_preserve_utf16_and_line_endings() {
+        let text = "/* 中文😀 */\r\npublic class User {\n\tString name; /* 😀 */ String code;\r\n}\n";
+        let positions = LineIndex::new(text);
+        for at in text.char_indices().map(|(i, _)| i).chain(std::iter::once(text.len())) {
+            assert_eq!(positions.position(at), position(text, at), "byte {at}");
+        }
+        let unit = java::parse(text);
+        for field in unit.fields {
+            let start = text.find(&field.name.name).unwrap();
+            assert_eq!(field.name.range, range_of(text, start, start + field.name.name.len()));
+        }
+    }
+
+    #[test]
+    fn expression_navigation_preserves_shared_sql_inheritance_and_foreach_scopes() {
+        let host = MockHost::install();
+        host.add_file("com/acme/UserMapper.java", "package com.acme;\npublic interface UserMapper extends BaseMapper<Filter> {}");
+        host.add_file("com/acme/BaseMapper.java", "package com.acme;\npublic interface BaseMapper<T> { User find(T filter); }");
+        host.add_file("com/acme/Filter.java", "package com.acme;\npublic class Filter { java.util.List<User> users; }");
+        let entity = "package com.acme;\r\npublic class User { /* 中文😀 */ String name; }";
+        host.add_file("com/acme/User.java", entity);
+        let text = "<mapper namespace=\"com.acme.UserMapper\">\n<sql id=\"filters\"><if test=\"item.name != null\">#{item.name}</if></sql>\n<select id=\"find\"><foreach collection=\"users\" item=\"item\"><include refid=\"filters\"/></foreach></select>\n</mapper>";
+        let document = doc("/project/UserMapper.xml", "xml", text);
+        let mut navigator = Navigator::default();
+        let target = Location {
+            path: "/project/com/acme/User.java".into(),
+            range: range_of(entity, entity.find("name").unwrap(), entity.find("name").unwrap() + 4),
+        };
+        for start in text.match_indices("item.name").map(|(i, _)| i) {
+            assert_eq!(navigator.definition(&document, position(text, start + 5)), [target.clone()]);
+        }
+        let start = text.find("item.name").unwrap() + 7;
+        let completions = navigator.completion(&document, position(text, start), None);
+        assert!(completions.iter().any(|item| item.label == "name"));
+        assert!(navigator.class_path.is_empty());
+        assert!(navigator.java_path.is_empty());
     }
 
     #[test]

@@ -7,7 +7,7 @@ A plugin for [OpenIDEA](https://github.com/l0ng-ai/openidea) providing navigatio
 ## Compatibility and permissions
 
 - Plugin ID: `helipengye.mybatis-tools`
-- Plugin version: `0.1.8` in `plugin.toml`; the Rust crate version is currently `0.1.0`.
+- Plugin version: `0.1.9` in `plugin.toml`; the Rust crate version is currently `0.1.0`.
 - Plugin API requirement: `engines.openidea = "^1.2"`.
 - Required capability: `project.read`, for finding and reading mapper XML and Java sources. The plugin does not execute SQL or connect to a database.
 - The SDK is pinned to commit `9c5372c7ab44207f0d3ac3d01fcb62af224091b7` of OpenIDEA for API 1.2 compatibility.
@@ -22,6 +22,8 @@ A plugin for [OpenIDEA](https://github.com/l0ng-ai/openidea) providing navigatio
 - Parameter and Java property completion in `#{…}`, `${…}` and dynamic SQL test expressions, including `@Param` names, nested properties and `foreach` variables where resolvable.
 
 Java Ctrl-click / Go to Definition remains handled by the IDE. Use gutter icons to navigate from a Java declaration to its XML statement.
+
+Version 0.1.9 reduces latency when navigating from XML `test` expressions: Java declaration positions reuse a line index, and expression navigation reads XML tags as needed without first collecting all mappings. Reference navigation resolves only the value at the caret. Shared SQL fragments, inherited parameters, nested properties and `foreach` scopes remain supported; the IDE's 500ms timeout is unchanged.
 
 ## Usage
 
@@ -72,7 +74,7 @@ cargo test --locked
 powershell -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
-The script generates `dist/plugin.wasm` and `dist/helipengye.mybatis-tools-0.1.8.oiplugin`. The package version comes from `plugin.toml`. The unsigned local package includes the manifest, component, both READMEs and `LICENSE`.
+The script generates `dist/plugin.wasm` and `dist/helipengye.mybatis-tools-0.1.9.oiplugin`. The package version comes from `plugin.toml`. The unsigned local package includes the manifest, component, both READMEs and `LICENSE`.
 
 Alternatively, use the OpenIDEA plugin CLI; see the [official plugin guide](https://github.com/l0ng-ai/openidea/blob/main/plugins/README.md):
 
@@ -81,7 +83,7 @@ openidea-plugin build
 openidea-plugin link
 ```
 
-`build` generates and validates `dist/plugin.wasm`; `link` loads this folder in the local IDE. After rebuilding, use **Settings → Plugins → Reload**. Unit tests in `src/lib.rs` cover parsing, navigation, sliced indexing and statement/parameter completion.
+`build` generates and validates `dist/plugin.wasm`; `link` loads this folder in the local IDE. After rebuilding, use **Settings → Plugins → Reload**. Unit tests in `src/lib.rs` cover parsing, navigation, sliced indexing, statement/parameter completion, UTF-16 positions, shared SQL/foreach scopes and a 6000-property navigation regression within 500ms in the native mock host. Native test timings do not measure IDE/WASM performance.
 
 ## Source layout
 

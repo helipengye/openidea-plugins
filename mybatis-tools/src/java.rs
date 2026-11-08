@@ -1,4 +1,4 @@
-use crate::{Named, ident, range_of};
+use crate::{LineIndex, Named, ident};
 use std::collections::BTreeMap;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -276,11 +276,12 @@ fn modifiers<'a, 'b>(ts: &'a [Token<'b>]) -> &'a [Token<'b>] {
     &ts[n..]
 }
 
-fn named(text: &str, token: Token<'_>) -> Named {
-    Named { name: token.text.into(), range: range_of(text, token.start, token.end) }
+fn named(positions: &LineIndex<'_>, token: Token<'_>) -> Named {
+    Named { name: token.text.into(), range: positions.range(token.start, token.end) }
 }
 
 pub(crate) fn parse(text: &str) -> Java {
+    let positions = LineIndex::new(text);
     let ts = tokens(text);
     let mut out = Java::default();
     for (i, t) in ts.iter().enumerate() {
@@ -344,17 +345,17 @@ pub(crate) fn parse(text: &str) -> Java {
                         let p = modifiers(&p);
                         let mut at = 0;
                         let ty = read_type(p, &mut at)?;
-                        Some(Parameter { name: named(text, *p.get(at)?), alias, ty })
+                        Some(Parameter { name: named(&positions, *p.get(at)?), alias, ty })
                     })
                     .collect();
-                out.methods.push(Method { name: named(text, header[paren - 1]), params, returns, is_static });
+                out.methods.push(Method { name: named(&positions, header[paren - 1]), params, returns, is_static });
             }
         } else {
             let mut at = 0;
             if let Some(ty) = read_type(header, &mut at) {
                 for field in split(&header[at..]) {
                     if let Some(t) = field.first().filter(|t| word(t.text)) {
-                        out.fields.push(Member { name: named(text, *t), ty: ty.clone(), is_static });
+                        out.fields.push(Member { name: named(&positions, *t), ty: ty.clone(), is_static });
                     }
                 }
             }

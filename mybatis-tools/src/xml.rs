@@ -33,12 +33,12 @@ impl Tag<'_> {
     }
 }
 
-pub(crate) fn tags(text: &str) -> Vec<Tag<'_>> {
-    let mut out = Vec::new();
+pub(crate) fn tags(text: &str) -> impl Iterator<Item = Tag<'_>> {
     let mut at = 0;
     let mut position_at = 0;
     let mut position = Position::new(0, 0);
-    while let Some(i) = text[at..].find('<') {
+    std::iter::from_fn(move || {
+        let i = text[at..].find('<')?;
         let start = at + i;
         position = position_after(position, &text[position_at..start]);
         position_at = start;
@@ -52,8 +52,7 @@ pub(crate) fn tags(text: &str) -> Vec<Tag<'_>> {
         };
         if let Some((name, close)) = special {
             at = start + tail.find(close).map_or(tail.len(), |n| n + close.len());
-            out.push(Tag { start, end: at, name, closing: false, empty: true, attrs: Vec::new(), position });
-            continue;
+            return Some(Tag { start, end: at, name, closing: false, empty: true, attrs: Vec::new(), position });
         }
         let content = start + 1 + usize::from(tail.starts_with("</"));
         let name_end =
@@ -75,7 +74,7 @@ pub(crate) fn tags(text: &str) -> Vec<Tag<'_>> {
         let attrs =
             attrs_of(&text[content..end]).into_iter().map(|(n, v, s, e)| (n, v, content + s, content + e)).collect();
         at = (end + 1).min(text.len());
-        out.push(Tag {
+        Some(Tag {
             start,
             end: at,
             name: &text[content..name_end],
@@ -83,9 +82,12 @@ pub(crate) fn tags(text: &str) -> Vec<Tag<'_>> {
             empty: text[content..end].trim_end().ends_with('/'),
             attrs,
             position,
-        });
-    }
-    out
+        })
+    })
+}
+
+pub(crate) fn namespace(text: &str) -> Option<String> {
+    tags(text).find(|tag| tag.name == "mapper" && !tag.closing)?.attr(text, "namespace").map(|n| n.name)
 }
 
 #[derive(Clone)]
