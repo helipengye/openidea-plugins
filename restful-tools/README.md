@@ -6,7 +6,7 @@ A standalone [OpenIDEA](https://github.com/l0ng-ai/openidea) plugin for endpoint
 
 ## Compatibility and permissions
 
-- Plugin ID: `helipengye.restful-tools`; version: `0.1.3`.
+- Plugin ID: `helipengye.restful-tools`; version: `0.1.5`.
 - Plugin API requirement: `engines.openidea = "^1.2"`.
 - Required capabilities: `project.read` to read project files and `storage` to save environments and scan caches.
 - Optional capabilities: `net:localhost` and `net:127.0.0.1` for local requests.
@@ -14,14 +14,18 @@ A standalone [OpenIDEA](https://github.com/l0ng-ai/openidea) plugin for endpoint
 
 ## Installation and usage
 
-1. Build the plugin, then select `dist/helipengye.restful-tools-0.1.3.oiplugin` in **Settings → Plugins → Install Plugin from Package File**. Installations with a different plugin ID are treated as separate plugins.
+1. Build the plugin, then select `dist/helipengye.restful-tools-0.1.5.oiplugin` in **Settings → Plugins → Install Plugin from Package File**. Installations with a different plugin ID are treated as separate plugins.
 2. Grant project read and plugin storage capabilities. Enable the optional `net:localhost` / `net:127.0.0.1` capabilities when sending requests to local services.
 3. Open a trusted project. Use the Tools menu or **RESTful Tools: Open** in Find Action to open the bottom tool window.
 4. Click **Scan project**, then browse **project → module → controller → endpoint**. Modules are identified from Maven/Gradle build files and `src` directories. Modules and controllers start collapsed; endpoint nodes are created on expansion. Controller labels support `Tag` / `Api`; endpoint labels support `Operation` / `ApiOperation`.
-5. Search by module, URL, HTTP method, controller, method name, display label or file path. All search terms must match.
+5. Search by module, URL, HTTP method, controller, method name, display label or file path. Matching ignores case and supports ordered characters: `gdsdtl` matches `/api/goods/sales/detail`, and `qsd` matches `querySalesDetail`. Whitespace separates terms with AND semantics: `GET gdsdtl` requires both terms to match. Each term must match within one field; different terms may match different fields. Existing substring searches still work. Character order matters; wildcards and typo correction are not supported.
 6. Click an endpoint to fill the request method and URL. Double-click it or use **Go to code** to navigate to the source. `ANY` means the mapping does not restrict the HTTP method; the editor defaults to GET and allows changing it.
 7. Use **Edit environments** to save configurations. The selected environment replaces `{{name}}` in URLs, header values and request bodies.
 8. Edit the request and click **Send**. The response displays status, duration, body size, headers and body, with JSON formatting. Cancel requests through the IDE's background task controls.
+
+Search hits have a background highlight in visible URLs, HTTP methods, Java method names, endpoint labels and tree labels. For each term and field, the first contiguous match is highlighted when present; otherwise the first ordered character match is used. Adjacent and overlapping hits merge into one highlight block. Original text and the selected-row background are preserved, and highlight colors follow the IDE theme. Matches found only in file paths or other hidden fields may leave the displayed route text unhighlighted. Clearing the search removes all highlights.
+
+Highlight positions are calculated only for rendered text. Collapsed controllers keep their endpoint rows unrendered, and the existing 120 ms input debounce remains in place to limit work on large result sets.
 
 Scanning runs in batches with progress counts. **Cancel scan** keeps partial results in the current instance. Completed scans are compressed and saved per project. Opening the panel after an IDE restart or plugin reload automatically restores the last saved scan, including search and source navigation, with its cache time displayed.
 
@@ -92,7 +96,7 @@ rustup target add wasm32-wasip2
 powershell -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
-The entry script calls this repository's shared `../scripts/build-plugin.ps1`, generating `dist/plugin.wasm` and the unsigned local package `dist/helipengye.restful-tools-0.1.3.oiplugin`. The package includes the manifest, component, both READMEs, `LICENSE` and all `web/` assets. It builds independently of the IDE and other plugins. The first build fetches the pinned SDK from Git. If `CARGO_TARGET_DIR` is set, the script copies the component from that directory.
+The entry script calls this repository's shared `../scripts/build-plugin.ps1`, generating `dist/plugin.wasm` and the unsigned local package `dist/helipengye.restful-tools-0.1.5.oiplugin`. The package includes the manifest, component, both READMEs, `LICENSE` and all `web/` assets. It builds independently of the IDE and other plugins. The first build fetches the pinned SDK from Git. If `CARGO_TARGET_DIR` is set, the script copies the component from that directory.
 
 Alternatively, build and link the directory with the OpenIDEA plugin CLI; see the [official plugin guide](https://github.com/l0ng-ai/openidea/blob/main/plugins/README.md):
 
@@ -107,6 +111,12 @@ Run source unit tests covering scanning, navigation, environment storage, reques
 
 ```sh
 cargo test --locked
+```
+
+Run the search panel regression tests with Node.js:
+
+```sh
+node --test tests/search.test.cjs
 ```
 
 Suggested manual checks:
@@ -126,6 +136,7 @@ Suggested manual checks:
 - `src/scan.rs`: source route scanning for Spring, Feign and JAX-RS.
 - `src/request.rs`: environment substitution and HTTP request validation.
 - `web/`: panel HTML, CSS, JavaScript and English/Chinese locales.
+- `tests/search.test.cjs`: search and highlight tests for cached results, whitespace AND matching, Unicode text and lazy rendering with 8,896 endpoints.
 - `build.ps1`: entry point for the shared Windows build, API version checks and packaging script.
 
 Licensed under Apache-2.0; see [LICENSE](LICENSE). Original OpenIDEA contributor attributions are retained.

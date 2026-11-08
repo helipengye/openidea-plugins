@@ -99,6 +99,70 @@
     busy();
   }
 
+  function matchesWord(text, word, ranges) {
+    const contiguous = text.indexOf(word);
+    if (contiguous !== -1) {
+      if (ranges) ranges.push([contiguous, contiguous + word.length]);
+      return true;
+    }
+    const start = ranges?.length;
+    let offset = 0;
+    for (const character of word) {
+      const found = text.indexOf(character, offset);
+      if (found === -1) {
+        if (ranges) ranges.length = start;
+        return false;
+      }
+      if (ranges) ranges.push([found, found + character.length]);
+      offset = found + character.length;
+    }
+    return true;
+  }
+
+  function appendHighlighted(container, text, words) {
+    if (!words.length) {
+      container.append(document.createTextNode(text));
+      return;
+    }
+    // Collect positions only for rendered text, using the same matcher as filtering.
+    const ranges = [];
+    const normalized = text.toLowerCase();
+    for (const word of words) matchesWord(normalized, word, ranges);
+    if (!ranges.length) {
+      container.append(document.createTextNode(text));
+      return;
+    }
+    ranges.sort((a, b) => a[0] - b[0]);
+    let range = 0;
+    let offset = 0;
+    let normalizedOffset = 0;
+    let start = 0;
+    let marked = false;
+    function append(end) {
+      if (end === start) return;
+      const fragment = text.slice(start, end);
+      if (marked) {
+        const mark = document.createElement("mark");
+        mark.className = "search-hit";
+        mark.textContent = fragment;
+        container.append(mark);
+      } else container.append(document.createTextNode(fragment));
+    }
+    for (const character of text) {
+      const next = normalizedOffset + character.toLowerCase().length;
+      while (range < ranges.length && ranges[range][1] <= normalizedOffset) range++;
+      const hit = range < ranges.length && ranges[range][0] < next;
+      if (hit !== marked) {
+        append(offset);
+        start = offset;
+        marked = hit;
+      }
+      offset += character.length;
+      normalizedOffset = next;
+    }
+    append(text.length);
+  }
+
   function renderTree() {
     const tree = $("tree");
     tree.replaceChildren();
@@ -107,9 +171,11 @@
     const modules = new Map();
     let matches = 0;
     endpoints.forEach((endpoint, index) => {
-      const haystack =
-        `${endpoint.module} ${endpoint.method} ${endpoint.url} ${endpoint.controller} ${endpoint.controller_label} ${endpoint.name} ${endpoint.label} ${endpoint.path}`.toLowerCase();
-      if (!words.every((word) => haystack.includes(word))) return;
+      const fields = [
+        endpoint.module, endpoint.method, endpoint.url, endpoint.controller,
+        endpoint.controller_label, endpoint.name, endpoint.label, endpoint.path,
+      ].map((value) => value.toLowerCase());
+      if (!words.every((word) => fields.some((field) => matchesWord(field, word)))) return;
       matches++;
       if (!modules.has(endpoint.module)) modules.set(endpoint.module, { count: 0, controllers: new Map() });
       const module = modules.get(endpoint.module);
@@ -126,12 +192,14 @@
       return;
     }
 
-    function folder(key, label, title, populate, kind) {
+    function folder(key, label, suffix, title, populate, kind) {
       const group = document.createElement("details");
       group.className = "tree-node";
       group.open = (words.length > 0 && (kind !== "controller" || matches <= 200)) || expanded.has(key);
       const heading = document.createElement("summary");
-      heading.append(icon(kind), document.createTextNode(label));
+      heading.append(icon(kind));
+      appendHighlighted(heading, label, words);
+      heading.append(document.createTextNode(suffix));
       heading.title = title;
       const children = document.createElement("div");
       children.className = "tree-children";
@@ -164,12 +232,17 @@
         button.title = `${endpoint.path}:${endpoint.line + 1}`;
         const verb = document.createElement("span");
         verb.className = "verb";
-        verb.textContent = endpoint.method;
+        appendHighlighted(verb, endpoint.method, words);
         const route = document.createElement("span");
         route.className = "route";
-        route.textContent = endpoint.label ? `${endpoint.label}  ${endpoint.url}` : endpoint.url;
+        if (endpoint.label) {
+          appendHighlighted(route, endpoint.label, words);
+          route.append(document.createTextNode("  "));
+        }
+        appendHighlighted(route, endpoint.url, words);
         const name = document.createElement("small");
-        name.textContent = `${endpoint.name} · ${endpoint.line + 1}`;
+        appendHighlighted(name, endpoint.name, words);
+        name.append(document.createTextNode(` · ${endpoint.line + 1}`));
         route.append(name);
         button.append(verb, route);
         button.addEventListener("click", () => {
@@ -192,7 +265,8 @@
     tree.append(
       folder(
         "project",
-        `${project} · ${format("treeTotal", { count: matches })}`,
+        project,
+        ` · ${format("treeTotal", { count: matches })}`,
         root,
         (children) => {
           for (const [moduleName, module] of [...modules].sort(([a], [b]) => a.localeCompare(b))) {
@@ -200,7 +274,8 @@
             children.append(
               folder(
                 `module:${moduleName}`,
-                `${name} (${module.count})`,
+                name,
+                ` (${module.count})`,
                 moduleName,
                 (controllers) => {
                   for (const [key, rows] of module.controllers) {
@@ -208,7 +283,8 @@
                     controllers.append(
                       folder(
                         `controller:${key}`,
-                        `${first.controller_label || first.controller} (${rows.length})`,
+                        first.controller_label || first.controller,
+                        ` (${rows.length})`,
                         `${first.controller} · ${first.path}`,
                         (items) => routes(items, rows),
                         "controller",

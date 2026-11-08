@@ -157,6 +157,13 @@ summary {
   border-color: var(--openidea-accent);
   background: var(--openidea-bg-selected, transparent);
 }
+mark.search-hit {
+  color: inherit;
+  background: rgba(217, 171, 61, 0.32);
+  background: color-mix(in srgb, var(--openidea-warning, #d9ab3d) 32%, transparent);
+  border-radius: 2px;
+  padding: 0;
+}
 .verb {
   color: var(--openidea-accent);
   font: 11px var(--openidea-font-mono, monospace);

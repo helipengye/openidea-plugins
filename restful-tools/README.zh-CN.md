@@ -7,7 +7,7 @@
 
 ## 兼容性与权限
 
-- 插件 ID：`helipengye.restful-tools`；版本：`0.1.3`。
+- 插件 ID：`helipengye.restful-tools`；版本：`0.1.5`。
 - 插件 API 要求：`engines.openidea = "^1.2"`。
 - 必需权限：`project.read`（读取项目）和 `storage`（保存环境配置及扫描缓存）。
 - 可选权限：`net:localhost`、`net:127.0.0.1`（向本机服务发起请求）。
@@ -16,7 +16,7 @@
 ## 安装与使用
 
 1. 在 OpenIDEA 的“设置 → 插件 → Install Plugin from Package File（从包文件安装）”中选择
-   `dist/helipengye.restful-tools-0.1.3.oiplugin`。不同插件 ID 的安装会被视为独立插件。
+   `dist/helipengye.restful-tools-0.1.5.oiplugin`。不同插件 ID 的安装会被视为独立插件。
 2. 授予读取项目和插件存储权限；需要本机请求时，勾选可选的
    `net:localhost` / `net:127.0.0.1` 权限。
 3. 打开受信任项目，通过 Tools 菜单或 Find Action 中的
@@ -24,13 +24,25 @@
 4. 点击“扫描项目”，按“项目 → 模块 → 控制器 → 接口”浏览。模块通过 Maven/Gradle
    构建文件和 `src` 目录识别；模块和控制器默认折叠，展开时才创建接口节点。
    支持显示 `Tag` / `Api` 控制器名称、`Operation` / `ApiOperation` 接口名称。
-   搜索框支持模块、URL、HTTP 方法、控制器、方法名、中文名称和文件路径，多个词必须全部匹配。
+   搜索框支持模块、URL、HTTP 方法、控制器、方法名、中文名称和文件路径，忽略大小写。
+   支持有序字符匹配：`gdsdtl` 可匹配 `/api/goods/sales/detail`，`qsd` 可匹配 `querySalesDetail`。
+   空白分隔的多个词仍按 AND 匹配，例如 `GET gdsdtl` 要求两个词都命中。
+   每个词必须在同一字段内依次匹配全部字符，不同词可以匹配不同字段。原有连续片段查询仍可使用；
+   字符顺序必须一致，暂不支持通配符和拼写容错。
 5. 单击接口将方法和 URL 填入请求编辑器；双击接口或点击“跳转代码”定位源码。
    `ANY` 表示未限制 HTTP 方法，调试时默认选 GET，可手动切换。
 6. 在“编辑环境”中保存环境配置。选择环境后，URL、请求头值和请求体中的
    `{{name}}` 会使用当前环境替换。
 7. 编辑 URL、请求头、请求体后点击“发送”。响应显示状态码、耗时、正文大小、
    响应头和正文；JSON 正文自动缩进。需要取消时使用 IDE 后台任务中的取消按钮。
+
+可见的 URL、HTTP 方法、Java 方法名、接口名称及树节点名称会对命中字符加背景高亮。
+每个搜索词在每个字段内优先高亮首个连续片段，否则高亮首个有序字符匹配；相邻及重叠命中
+合并为一个高亮块。原始文字和选中行背景保持不变，高亮颜色跟随 IDE 主题。
+若仅命中文件路径等未展示字段，接口正文可能没有高亮；清空搜索会移除全部高亮。
+
+高亮位置只在实际渲染文字时计算，折叠控制器下的接口行仍按需创建，保留现有的
+120ms 输入防抖，减少大结果集下的重复工作。
 
 扫描分批处理，面板持续显示已扫描/发现的文件总数，可用“取消扫描”在当前实例中保留部分结果。
 完整扫描结束后，结果会压缩并按项目保存。重启 IDE 或重新加载插件后，打开面板会自动恢复
@@ -133,7 +145,7 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
 入口脚本调用本仓库共用的 `../scripts/build-plugin.ps1`，生成 `dist/plugin.wasm` 和
-未签名的本地安装包 `dist/helipengye.restful-tools-0.1.3.oiplugin`。包内包含插件清单、
+未签名的本地安装包 `dist/helipengye.restful-tools-0.1.5.oiplugin`。包内包含插件清单、
 组件、中英文 README、`LICENSE` 及全部 `web/` 资源。插件独立构建，不需要编译 OpenIDEA，
 也不会修改主程序或其他插件。首次构建需要从 Git 获取固定的 SDK。
 如已设置 `CARGO_TARGET_DIR`，构建产物会从该目录复制。
@@ -154,6 +166,12 @@ CLI 构建生成并校验 `dist/plugin.wasm`，`.oiplugin` 安装包由 `build.p
 cargo test --locked
 ```
 
+使用 Node.js 运行搜索面板回归测试：
+
+```sh
+node --test tests/search.test.cjs
+```
+
 建议手工检查：
 
 1. API 1.2.0 的 IDE 安装成功，插件详情中不出现引擎版本不匹配。
@@ -171,6 +189,7 @@ cargo test --locked
 - `src/scan.rs`：Spring、Feign 和 JAX-RS 源码路由扫描。
 - `src/request.rs`：环境变量替换和 HTTP 请求校验。
 - `web/`：面板页面、样式、脚本及中英文语言资源。
+- `tests/search.test.cjs`：缓存结果搜索、高亮、空白分词 AND 规则、Unicode 文字及 8,896 个接口按需渲染的面板测试。
 - `build.ps1`：共用 Windows 构建、API 版本检查及打包脚本的入口。
 
 许可证：Apache-2.0，见 [LICENSE](LICENSE)。保留原有 OpenIDEA 贡献者署名。

@@ -257,7 +257,7 @@ dependencies = [
 
 [[package]]
 name = "openidea-plugin-restful-tools"
-version = "0.1.3"
+version = "0.1.5"
 dependencies = [
  "base64",
  "miniz_oxide",
